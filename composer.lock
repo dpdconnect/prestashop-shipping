@@ -1,0 +1,72 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "c3b48a730521fced97e38e95c0efa544",
+    "packages": [
+        {
+            "name": "dpdconnect/php-sdk",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dpdconnect/php-sdk.git",
+                "reference": "12cabc0e204c56e5e9a7ff1fdde4492810cce6a2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dpdconnect/php-sdk/zipball/12cabc0e204c56e5e9a7ff1fdde4492810cce6a2",
+                "reference": "12cabc0e204c56e5e9a7ff1fdde4492810cce6a2",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "php": "^5.5 || ^7.0 || ^8.0"
+            },
+            "require-dev": {
+                "donatj/mock-webserver": "^2.0",
+                "overtrue/phplint": "^1.1",
+                "phpunit/phpunit": "~6.5.0",
+                "squizlabs/php_codesniffer": "^3.0@dev",
+                "symfony/yaml": "^4.2"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "DpdConnect\\Sdk\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "OSL-3.0"
+            ],
+            "authors": [
+                {
+                    "name": "DPD",
+                    "email": "pluginsupport@dpd.nl",
+                    "homepage": "http://www.dpd.nl"
+                }
+            ],
+            "description": "DPD Connect PHP SDK",
+            "support": {
+                "email": "pluginsupport@dpd.nl",
+                "issues": "http://www.dpd.nl",
+                "source": "https://github.com/dpdconnect/php-sdk/tree/1.1.11"
+            },
+            "time": "2023-02-20T11:59:05+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "dev",
+    "stability-flags": {
+        "dpdconnect/php-sdk": 20
+    },
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": [],
+    "plugin-api-version": "2.2.0"
+}
