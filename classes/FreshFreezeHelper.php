@@ -12,6 +12,12 @@ class FreshFreezeHelper
     const TYPE_FRESH = 'fresh';
     const TYPE_FREEZE = 'freeze';
 
+    const AVAILABLE_TYPES = [
+        self::TYPE_DEFAULT,
+        self::TYPE_FRESH,
+        self::TYPE_FREEZE,
+    ];
+
     public static function ordersContainFreshFreezeProducts($orderIds)
     {
         foreach ($orderIds as $orderId) {

@@ -25,6 +25,8 @@ if (!defined('_PS_VERSION_')) {
 
 require_once(_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php');
 
+use Doctrine\ORM\EntityManagerInterface;
+use DpdConnect\classes\Connect\Connection;
 use DpdConnect\classes\DpdProductHelper;
 use DpdConnect\classes\DpdHelper;
 use DpdConnect\classes\DpdCarrier;
@@ -35,11 +37,14 @@ use DpdConnect\classes\DpdLabelGenerator;
 use DpdConnect\classes\DpdEncryptionManager;
 use DpdConnect\classes\DpdCheckoutDeliveryStep;
 use DpdConnect\classes\DpdDeliveryOptionsFinder;
+use DpdConnect\Entity\ProductShippingInformation;
+use DpdConnect\Form\Modifier\ProductFormModifier;
+use DpdConnect\Sdk\Client;
 use PrestaShop\PrestaShop\Core\Grid\Action\Bulk\Type\SubmitBulkAction;
 
 class dpdconnect extends Module
 {
-    const VERSION = '1.0';
+    const VERSION = '2.0';
 
     public $twig;
     public $dpdHelper;
@@ -47,41 +52,41 @@ class dpdconnect extends Module
     public $dpdParcelPredict;
     public $dpdProductHelper;
 
-    private $ownControllers = [
-        'AdminDpdLabels' => 'DPD label',
-        'AdminDownloadLabel' => 'DPD Download label',
-        'AdminDpdShippingList' => 'DPD ShippingList',
-        'AdminDpdProductAttributesController' => 'DPD Product Attributes',
-    ];
+    /** @var EntityManagerInterface */
+    private $entityManager;
+
     private $hooks = [
+        // Admin
         'displayAdminOrderTabLink',
         'displayAdminOrderTabContent',
-        'actionAdminBulkAffectZoneAfter',
         'actionCarrierProcess',
+        'actionDispatcher', // Hook for updating DPD Carriers
+        'actionProductFormBuilderModifier', // Hook to add custom fields to admin product page
+        'actionAfterUpdateProductFormHandler', // Hook to process custom fields on admin product page
+
+        // Checkout
+        'actionCheckoutRender',
+        'displayAfterCarrier',
+
         'displayOrderConfirmation',
-        'displayBeforeCarrier',
-        'actionValidateOrder',
         'actionOrderGridDefinitionModifier',
         'displayBackOfficeHeader',
-        'actionDispatcher', // Hook for updating DPD Carriers
-        'displayAdminProductsShippingStepBottom',
     ];
 
 
     public function __construct()
     {
-//        try {
-//            $this->twig = new \Twig\Environment(new \Twig\Loader\Filesystem([
-//                _PS_ROOT_DIR_ . '/modules/dpdconnect/views'
-//            ]));
-//        }catch (Exception $exception) {
-//
-//        }
-
         $this->dpdHelper = new DpdHelper();
         $this->dpdCarrier = new DpdCarrier();
         $this->dpdParcelPredict = new DpdParcelPredict();
         $this->dpdProductHelper = new DpdProductHelper();
+
+        // Initialize basic stuff
+        $container = \PrestaShop\PrestaShop\Adapter\SymfonyContainer::getInstance();
+        if ($container !== null) {
+            /** @var EntityManagerInterface $entityManager */
+            $this->entityManager = $container->get('doctrine.orm.entity_manager');
+        }
 
         // the information about the plugin.
         $this->version = self::VERSION;
@@ -92,7 +97,7 @@ class dpdconnect extends Module
         $this->limited_countries = ['be', 'lu', 'nl'];
 
         $this->ps_versions_compliancy = [
-            'min' => '8.0.0',
+            'min' => '1.7.0',
             'max' => _PS_VERSION_
         ];
         $this->need_instance = 1;
@@ -150,27 +155,22 @@ class dpdconnect extends Module
             Configuration::updateValue('dpdconnect_parcel_limit', 12);
         }
         if (!$this->dpdHelper->installDB()) {
-            //TODO create log that database could not be installed.
+            \PrestaShopLogger::addLog('[DPD] Could not install the database', 3);
             return false;
         }
         foreach ($this->hooks as $hookName) {
             if (!$this->registerHook($hookName)) {
-            //TODO create a log that hook could not be installed.
+                PrestaShopLogger::addLog('[DPD] Cannot register hook ' . $hookName, 3);
                 return false;
             }
         }
-        if (!$this->dpdHelper->installControllers($this->ownControllers)) {
-            //TODO create a log that hook could not be installed.
-            return false;
-        }
         if (!$this->dpdHelper->update()) {
-            //TODO create a log that the updates could not be executed
+            \PrestaShopLogger::addLog('[DPD] Update failed', 3);
             return false;
         }
-        if (!$this->dpdCarrier->createCarriers()) {
-            //TODO create a log that the carrier could not be installed
-            return false;
-        }
+
+        \PrestaShopLogger::addLog('[DPD] Module installed correctly!', 1);
+
         return true;
     }
 
@@ -189,8 +189,8 @@ class dpdconnect extends Module
                     $moduleTab->delete();
                 }
             }
-            $this->dpdCarrier->deleteCarriers();
             Configuration::updateValue('dpd', 'not installed');
+
             return true;
         }
     }
@@ -213,22 +213,25 @@ class dpdconnect extends Module
             $postalcode = strval(Tools::getValue("postalcode"));
             $place = strval(Tools::getValue("place"));
             $country = strval(Tools::getValue("country"));
-            $email = strval(Tools::getValue("email"));
-            $vatnumber = strval(Tools::getValue("vatnumber"));
-            $eorinumber = strval(Tools::getValue("eorinumber"));
-            $spr = strval(Tools::getValue("spr"));
-            $mapsKey = Tools::getValue('maps_key');
-            $useDpdKey = Tools::getValue('use_dpd_key');
-            $defaultProductHcs = Tools::getValue('default_product_hcs');
-            $defaultProductWeight = Tools::getValue('default_product_weight');
-            $defaultProductCountryOfOrigin = Tools::getValue('default_product_country_of_origin');
-            $countryOfOriginFeature = Tools::getValue('country_of_origin_feature');
-            $ageCheckAttribute = Tools::getValue('age_check_attribute');
-            $customsValueFeature = Tools::getValue('customs_value_feature');
-            $hsCodeFeature = Tools::getValue('hs_code_feature');
-            $connecturl = strval(Tools::getValue("dpdconnect_url"));
-            $callbackUrl = Tools::getValue('callback_url');
-            $asyncTreshold = Tools::getValue('async_treshold');
+            $email = strval(Tools::getValue("email") ?? '');
+            $vatnumber = strval(Tools::getValue("vatnumber") ?? '');
+            $eorinumber = strval(Tools::getValue("eorinumber") ?? '');
+            $labelFormat = Tools::getValue('labelformat') ?? 'a4';
+            $spr = strval(Tools::getValue("spr") ?? '');
+            $mapsKey = Tools::getValue('maps_key') ?? '';
+            $useDpdKey = Tools::getValue('use_dpd_key') ?? '1';
+            $defaultProductHcs = Tools::getValue('default_product_hcs') ?? '';
+            $defaultProductWeight = Tools::getValue('default_product_weight') ?? '';
+            $defaultProductCountryOfOrigin = Tools::getValue('default_product_country_of_origin') ?? '';
+            $countryOfOriginFeature = Tools::getValue('country_of_origin_feature') ?? '';
+            $ageCheckAttribute = Tools::getValue('age_check_attribute') ?? '';
+            $customsValueFeature = Tools::getValue('customs_value_feature') ?? '';
+            $hsCodeFeature = Tools::getValue('hs_code_feature') ?? '';
+            $connecturl = strval(Tools::getValue("dpdconnect_url") ?? '');
+            $callbackUrl = Tools::getValue('callback_url') ?? '';
+            $asyncTreshold = Tools::getValue('async_treshold') ?? '';
+            $markStatus = Tools::getValue('mark_status') ?? '';
+            $mergePdf = Tools::getValue('merge_pdfs') ?? false;
 
             if (
                 !(
@@ -248,6 +251,7 @@ class dpdconnect extends Module
                 }
                 Configuration::updateValue('dpdconnect_depot', $depot);
                 Configuration::updateValue('dpdconnect_company', $company);
+                Configuration::updateValue('dpdconnect_labelformat', $labelFormat);
                 Configuration::updateValue('dpdconnect_street', $street);
                 Configuration::updateValue('dpdconnect_postalcode', $postalcode);
                 Configuration::updateValue('dpdconnect_place', $place);
@@ -259,18 +263,26 @@ class dpdconnect extends Module
                 Configuration::updateValue('dpdconnect_default_product_hcs', $defaultProductHcs);
                 Configuration::updateValue('dpdconnect_default_product_weight', $defaultProductWeight);
                 Configuration::updateValue('dpdconnect_default_product_country_of_origin', $defaultProductCountryOfOrigin);
-                Configuration::updateValue('dpdconnect_default_product_country_of_origin', $defaultProductCountryOfOrigin);
                 Configuration::updateValue('dpdconnect_age_check_attribute', $ageCheckAttribute);
                 Configuration::updateValue('dpdconnect_customs_value_feature', $customsValueFeature);
                 Configuration::updateValue('dpdconnect_hs_code_feature', $hsCodeFeature);
                 Configuration::updateValue('dpdconnect_url', $connecturl);
                 Configuration::updateValue('dpdconnect_callback_url', $callbackUrl);
                 Configuration::updateValue('dpdconnect_async_treshold', $asyncTreshold);
+                Configuration::updateValue('dpdconnect_mark_status', $markStatus);
+                Configuration::updateValue('dpdconnect_merge_pdf_files', $mergePdf);
                 $output .= $this->displayConfirmation($this->l('Settings updated'));
             } else {
                 $output .= $this->displayError($this->l('Invalid Configuration value'));
             }
         }
+
+        $orderStatusses = [];
+        $orderStatusses[] = [
+            'id_order_state' => '',
+            'name' => 'Disabled'
+        ];
+        $orderStatusses = array_merge($orderStatusses, (new OrderState())->getOrderStates(1));
 
         $formAccountSettings = [
             'legend' => [
@@ -321,7 +333,65 @@ class dpdconnect extends Module
                             'label' => $this->l('No')
                         )
                     ),
-
+                ],
+                [
+                    'type' => 'select',
+                    'label' => $this->l("Label format"),
+                    'name' => 'labelformat',
+                    'required' => true,
+                    'class' => 't',
+                    'options' => [
+                        'query' => [
+                            [
+                                "id_feature" => 'A4',
+                                "position" => 1,
+                                "id_lang" => 1,
+                                "name" => "A4",
+                            ],
+                            [
+                                "id_feature" => 'A6',
+                                "position" => 2,
+                                "id_lang" => 1,
+                                "name" => "A6",
+                            ],
+                        ],
+                        'id' => 'id_feature',
+                        'name' => 'name',
+                    ],
+                ],
+                [
+                    'type' => 'select',
+                    'label' => $this->l("Change order status"),
+                    'desc' => $this->l('Change order status after a label is created. If you do not want to change the order status, set to Disabled.'),
+                    'name' => 'mark_status',
+                    'required' => true,
+                    'class' => 't',
+                    'options' => [
+                        'query' => $orderStatusses,
+                        'id' => 'id_order_state',
+                        'name' => 'name',
+                    ],
+                ],
+                [
+                    'type' => 'radio',
+                    'label' => $this->l("Merge PDF files "),
+                    'desc' => $this->l('With this option you can select if you want to get a merged PDF file or a zip file when using the bulk select when genereting labels.'),
+                    'name' => 'merge_pdfs',
+                    'required' => true,
+                    'class' => 't',
+                    'is_bool' => true,
+                    'values' => array(
+                        array(
+                            'id'    => 'yes',
+                            'value' => 1,
+                            'label' => $this->l('Yes')
+                        ),
+                        array(
+                            'id'    => 'no',
+                            'value' => 0,
+                            'label' => $this->l('No')
+                        )
+                    ),
                 ],
             ],
         ];
@@ -358,6 +428,7 @@ class dpdconnect extends Module
                 [
                     'type' => 'text',
                     'label' => $this->l('Country code'),
+                    'desc' => $this->l('Use ISO 3166-1 alpha-2 codes (e.g. NL, BE, DE, FR, etc.)'),
                     'name' => 'country',
                     'required' => true
                 ],
@@ -382,15 +453,19 @@ class dpdconnect extends Module
                 [
                     'type' => 'text',
                     'label' => $this->l('HMRC number'),
-                    'hint' => $this->l('Mandatory if the value of the parcel is ≤ £ 135.'),
+                    'desc' => $this->l('Mandatory if the value of the parcel is ≤ £ 135.'),
                     'name' => 'spr',
                     'required' => false
                 ],
             ],
         ];
 
-        $features = Feature::getFeatures($this->context->language->id);
-        $features[] = null;
+        $features = [];
+        $features[] = [
+            'id_feature' => '',
+            'name' => 'None'
+        ];
+        $features = array_merge($features, Feature::getFeatures($this->context->language->id));
 
         $productSettings = [
             'legend' => [
@@ -407,7 +482,7 @@ class dpdconnect extends Module
                 [
                     'type' => 'select',
                     'label' => $this->l('Customs value Feature'),
-                    'hint' => $this->l('Select the product feature where the customs value is defined. If features are not used for customs value, leave empty to use DPD Product attributes or regular product price.'),
+                    'desc' => $this->l('Select the product feature where the customs value is defined. If features are not used for customs value, leave empty to use DPD Product attributes or regular product price.'),
                     'name' => 'customs_value_feature',
                     'options' => [
                         'query' => $features,
@@ -419,7 +494,7 @@ class dpdconnect extends Module
                 [
                     'type' => 'select',
                     'label' => $this->l('Country of origin Feature'),
-                    'hint' => $this->l('Select the product feature where the product of origin is defined. If features are not used for country of origin, leave empty.'),
+                    'desc' => $this->l('Select the product feature where the product of origin is defined. If features are not used for country of origin, leave empty.'),
                     'name' => 'country_of_origin_feature',
                     'options' => [
                         'query' => $features,
@@ -431,13 +506,14 @@ class dpdconnect extends Module
                 [
                     'type' => 'text',
                     'label' => $this->l('Default Country of Origin'),
+                    'desc' => $this->l('Use ISO 3166-1 alpha-2 codes (e.g. NL, BE, DE, FR, etc.)'),
                     'name' => 'default_product_country_of_origin',
                     'required' => false
                 ],
                 [
                     'type' => 'select',
                     'label' => $this->l('Harmonized System Code Feature'),
-                    'hint' => $this->l('Select the product feature where the Harmonized System Code is defined. If features are not used for harmonized system codes, leave empty.'),
+                    'desc' => $this->l('Select the product feature where the Harmonized System Code is defined. If features are not used for harmonized system codes, leave empty.'),
                     'name' => 'hs_code_feature',
                     'options' => [
                         'query' => $features,
@@ -449,7 +525,7 @@ class dpdconnect extends Module
                 [
                     'type' => 'select',
                     'label' => $this->l('Age check attribute'),
-                    'hint' => $this->l('Select the attribute used for age check'),
+                    'desc' => $this->l('Select the attribute used for age check'),
                     'name' => 'age_check_attribute',
                     'options' => [
                         'query' => $features,
@@ -489,7 +565,7 @@ class dpdconnect extends Module
                     'type' => 'text',
                     'label' => $this->l('Async treshold'),
                     'name' => 'async_treshold',
-                    'hint' => 'Max 10',
+                    'desc' => 'Max 10',
                     'placeholder' => '10',
                     'required' => false
                 ],
@@ -504,6 +580,56 @@ class dpdconnect extends Module
         ];
 
         return $output . $this->dpdHelper->displayConfigurationForm($this, $formAccountSettings, $formAdres, $productSettings, $advancedSettings, $submit);
+    }
+
+    public function hookActionCheckoutRender($params)
+    {
+        $this->context->controller->addCSS(_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . '8dpdLocator.css', 'all');
+    }
+
+    public function hookDisplayAfterCarrier(array $params)
+    {
+        if ($this->context->cart->isVirtualCart()) {
+            return;
+        }
+        $address = new Address($params['cart']->id_address_delivery);
+
+        if (!$address->postcode) {
+            return;
+        }
+
+        $scope = $this->context->smarty->createData(
+            $this->context->smarty
+        );
+
+        $useDpdKey = Configuration::get('dpdconnect_use_dpd_key') == 1;
+
+        $mapsKey = '';
+        if (!$useDpdKey) {
+            $mapsKey = Configuration::get('gmaps_key');
+        }
+
+        $link = new \Link();
+        $scope->assign([
+            'baseUri' => __PS_BASE_URI__,
+            'parcelshopId' => $this->dpdCarrier->getLatestCarrierByReferenceId($this->dpdProductHelper->getDpdParcelshopCarrierId()),
+            'sender' => $this->context->cart->id_carrier,
+            'shippingAddress' => sprintf('%s %s %s', $address->address1, $address->postcode, $address->country),
+            'dpdPublicToken' => (new Connection())->getPublicJwtToken(),
+            'shopCountryCode' => $this->context->language->iso_code,
+            'mapsKey' => $mapsKey,
+            'cookieParcelId' => $this->context->cookie->parcelId,
+            'oneStepParcelshopUrl' => $link->getModuleLink('dpdconnect', 'OneStepParcelshop'),
+            'dpdParcelshopMapUrl' => (Configuration::get('dpdconnect_url')) ? Configuration::get('dpdconnect_url') : Client::ENDPOINT . '/parcelshop/map/js',
+        ]);
+
+        $tpl = $this->context->smarty->createTemplate(
+            _PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . '8' . DIRECTORY_SEPARATOR . '_dpdLocator8.tpl',
+            $scope
+        );
+
+        return $tpl->fetch();
+
     }
 
     // Define Order grid bulk actions
@@ -546,7 +672,8 @@ class dpdconnect extends Module
         if ($this->dpdParcelPredict->checkIfDpdSending($orderId)) {
             $this->context->smarty->assign([
                 'isDpdCarrier' => $this->dpdParcelPredict->checkifParcelCarrier($orderId),
-                'dpdParcelshopId' => $parcelShopId
+                'dpdParcelshopId' => $parcelShopId,
+                'number' => DpdLabelGenerator::countLabels($orderId),
             ]);
             return $this->display(__FILE__, '_adminOrderTab.tpl');
         }
@@ -555,7 +682,7 @@ class dpdconnect extends Module
     public function hookDisplayAdminOrderTabContent($params)
     {
         $orderId = Tools::getValue('id_order');
-        $parcelShopId = $this->dpdParcelPredict->getParcelShopId($orderId);
+        $parcelShopData = $this->dpdParcelPredict->getParcelShopData($orderId);
         $parcelCarrier = $this->dpdParcelPredict->checkifParcelCarrier($orderId);
 
         if ($this->dpdParcelPredict->checkIfDpdSending($orderId)) {
@@ -565,11 +692,10 @@ class dpdconnect extends Module
 
             $urlGenerateReturnLabel = $urlGenerateLabel . '&return=true';
 
-
-
             $this->context->smarty->assign([
                 'parcelCarrier' => $parcelCarrier,
-                'parcelShopId' => $parcelShopId,
+                'parcelShopId' => $parcelShopData['parcelshop_id'] ?? null,
+                'parcelShopData' => json_decode($parcelShopData['parcelshop_data'] ?? '', true),
                 'number' => DpdLabelGenerator::countLabels($orderId),
                 'isInDb' => DpdLabelGenerator::getLabelOutOfDb($orderId),
                 'urlGenerateLabel' => $urlGenerateLabel,
@@ -599,9 +725,11 @@ class dpdconnect extends Module
             if (!empty($this->context->cookie->parcelId) && !($this->context->cookie->parcelId == '')) {
                 Db::getInstance()->insert('parcelshop', [
                     'order_id' => pSQL($order->id),
-                    'parcelshop_id' => pSQL($params['cookie']->parcelId)
+                    'parcelshop_id' => pSQL($params['cookie']->parcelId),
+                    'parcelshop_data' => pSQL($params['cookie']->parcelshopData)
                 ]);
-                unset($this->context->cookie->parcelId) ;
+                unset($this->context->cookie->parcelId);
+                unset($this->context->cookie->parcelshopData);
             }
         }
     }
@@ -662,19 +790,38 @@ class dpdconnect extends Module
     }
 
     // Hook for adding custom Fresh and Freeze product fields
-    public function hookDisplayAdminProductsShippingStepBottom($params)
+    public function hookActionProductFormBuilderModifier($params)
     {
-        $product = new Product($params['id_product']);
+        $productFormModifier = $this->get(ProductFormModifier::class);
+        $productId = (int) $params['id'];
 
-        $connectProduct = new DpdConnect\classes\Connect\Product();
-        $dpdProducts = $connectProduct->getList();
+        $productFormModifier->modify($productId, $params['form_builder']);
+    }
 
-        $isFreshFreezeAllowed = in_array('fresh', array_column($dpdProducts, 'type'));
+    public function hookActionAfterUpdateProductFormHandler(array $params)
+    {
+        $productId = (int) $params['id'];
+        $formData = $params['form_data'];
 
-        return $this->twig->render('templates/admin/fresh_freeze/shipping.html.twig', [
-            'product' => $product,
-            'isFreshFreezeAllowed' => $isFreshFreezeAllowed
+        $repository = $this->entityManager->getRepository(ProductShippingInformation::class);
+        $productShippingInformation = $repository->findOneBy([
+            'productId' => $productId,
         ]);
+
+        $dpdShippingProduct = $formData['dpd']['dpd_shipping_product'];
+        $dpdCarrierDescription = $formData['dpd']['dpd_carrier_description'];
+        if (null === $productShippingInformation) {
+            $productShippingInformation = new ProductShippingInformation();
+            $productShippingInformation->setProductId($productId);
+            $productShippingInformation->setDpdShippingProduct($dpdShippingProduct);
+            $productShippingInformation->setDpdCarrierDescription($dpdCarrierDescription);
+        } else {
+            $productShippingInformation->setDpdShippingProduct($dpdShippingProduct);
+            $productShippingInformation->setDpdCarrierDescription($dpdCarrierDescription);
+        }
+
+        $this->entityManager->persist($productShippingInformation);
+        $this->entityManager->flush();
     }
 
     public function dpdCarrier()
@@ -690,11 +837,6 @@ class dpdconnect extends Module
             $objectPresenter,
             $priceFormatter
         );
-    }
-
-    public function dpdCheckoutDeliveryStep($context, $translator)
-    {
-        return new DpdCheckoutDeliveryStep($context, $translator);
     }
 
     public function dpdLabelGenerator()

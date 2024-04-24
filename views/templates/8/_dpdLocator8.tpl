@@ -1,5 +1,6 @@
 <!-- DPDCrier !-->
 <input name="parcel-id" type="hidden" id="parcel-id"/>
+
 {literal}
 <script>
     const baseUri = "{/literal}{$baseUri}{literal}";
@@ -15,15 +16,15 @@
 
     var mapInitialized = false;
 
-    document.addEventListener('DOMContentLoaded', function(){
+    document.addEventListener('DOMContentLoaded', function() {
         jQuery(document).on('ready', function () {
             $.getScript(dpdParcelshopMapUrl, function() {
-
                 DPDConnect.onParcelshopSelected = function (parcelshop) {
                     // Store selected parcelshop
                     jQuery.post(oneStepParcelshopUrl, {
                         'method': 'setParcelShop',
                         'parcelId': parcelshop.parcelShopId,
+                        'parcelshopData': JSON.stringify(parcelshop),
                         'parcelShopSenderId': parcelshopId,
                         'sender': sender
                     });
@@ -36,7 +37,6 @@
                 // Loop through every delivery option to see if a DPD Parcelshop carrier is selected
                 jQuery(".delivery-options input").each(function () {
                     if (jQuery("#" + this.id).prop("checked")) {
-
                         // Check if DPD Parcelshop carrier is selected
                         if (this.value === parcelshopId + ',') {
                             if (mapInitialized) {
@@ -80,7 +80,7 @@
                 });
 
                 // In normal checkout, prevent continuing when no parcelshop has been selected
-                jQuery('#dpd-connect\\\\classes\\\\dpd-checkout-delivery-step .continue').on('click', function(e) {
+                jQuery('#checkout-delivery-step .continue').on('click', function(e) {
                     if (jQuery('.delivery-options input:checked').val() == parcelshopId + ',' && !jQuery('#parcel-id').val()) {
                         e.preventDefault();
                         jQuery('.dpd-alert').show();
@@ -109,7 +109,7 @@
 
     function addDivs() {
         if(jQuery('#dpd-connect-container').length == 0 ){
-            jQuery('#dpd-connect\\\\classes\\\\dpd-checkout-delivery-step .content .form-fields').append(
+            jQuery('.delivery-options').append(
                 '<div id="dpd-connect-container"></div>'
             );
         }

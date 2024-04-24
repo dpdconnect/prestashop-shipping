@@ -79,6 +79,7 @@ class DpdLabelGenerator
             'pluginVersion' => Version::plugin(),
         ]));
         $this->dpdClient = $clientBuilder->buildAuthenticatedByPassword($username, $password);
+        $this->dpdClient->setCacheCallable(new \DpdConnect\classes\Connect\DpdConnectCache());
 
         $this->dpdClient->getAuthentication()->setJwtToken(
             Configuration::get('dpdconnect_jwt_token') ?: null
@@ -153,9 +154,19 @@ class DpdLabelGenerator
                     $orderCarrier = new OrderCarrier($order->getIdOrderCarrier());
                     $orderCarrier->tracking_number = reset($labelResponse['parcelNumbers']);
 
+                    if (!empty(Configuration::get('dpdconnect_mark_status'))) {
+                        $order->current_state = Configuration::get('dpdconnect_mark_status');
+                        $order->save();
+                    }
+
                     $orderCarrier->save();
                 }
             }
+        }
+
+        if (count($labelsForDirectDownload) === 0) {
+            $this->errors['VALIDATION'] = 'No labels were generated. Please check the order details and try again, order might not be a DPD order.';
+            return;
         }
 
         if (count($labelsForDirectDownload) > 1) {
@@ -260,7 +271,7 @@ class DpdLabelGenerator
                 'country' => Configuration::get('dpdconnect_country'),
                 'postalcode' => Configuration::get('dpdconnect_postalcode'),
                 'city' => Configuration::get('dpdconnect_place'),
-                'phoneNumber' => Configuration::get('PS_SHOP_PHONE'),
+                'phoneNumber' => (string)Configuration::get('PS_SHOP_PHONE'),
                 'email' => Configuration::get('dpdconnect_email'),
                 'commercialAddress' => true,
                 'vatnumber' => Configuration::get('dpdconnect_vatnumber'),
@@ -294,15 +305,22 @@ class DpdLabelGenerator
 
         if (
             !FreshFreezeHelper::shippingTypeIsFreshOrFreeze($dpdShippingType) &&
-            $this->dpdParcelPredict->checkifParcelCarrier($orderId)
+            $this->dpdParcelPredict->checkifParcelCarrier($orderId) &&
+            !$return
         ) {
             $parcelShopID = $this->dpdParcelPredict->getParcelShopId($orderId);
+            $shipment['product']['productCode'] = 'PSD';
             $shipment['product']['parcelshopId'] = $parcelShopID;
+            $shipment['product']['ageCheck'] = false;
             $shipment['notifications'][] = [
                 'subject' => 'parcelshop',
                 'channel' => 'EMAIL',
                 'value' => $customer->email,
             ];
+        }
+
+        if ($return) {
+            $shipment['product']['ageCheck'] = false;
         }
 
         $shipment['parcels'] = [];
@@ -356,7 +374,8 @@ class DpdLabelGenerator
             if ($weight === 0) {
                 $weight = Configuration::get('dpdconnect_default_product_weight');
             }
-            $amount = $customsValue * $orderProduct['product_quantity'];
+
+            $amount = $product->price * $orderProduct['product_quantity'];
             $totalAmount += $amount;
 
             $customsLines[] = [
@@ -446,8 +465,12 @@ class DpdLabelGenerator
     public static function generateOrderViewUrl($orderId)
     {
         $link = new LinkCore();
-        $link = $link->getAdminLink('AdminOrders');
-        $link = $link . '&id_order=' . $orderId . '&vieworder';
+        if (version_compare(_PS_VERSION_, '8.0.0', '>=')) {
+            $link = $link->getAdminLink('AdminOrders', true, ['id_order' => $orderId, 'vieworder' => '']);
+        } else {
+            $link = $link->getAdminLink('AdminOrders');
+            $link = $link . '&id_order=' . $orderId . '&vieworder';
+        }
 
         return $link;
     }
@@ -516,7 +539,7 @@ class DpdLabelGenerator
         $request = [
             'printOptions' => [
                 'printerLanguage' => 'PDF',
-                'paperFormat' => 'A4',
+                'paperFormat' => Configuration::get('dpdconnect_labelformat') ?? 'A4',
                 'verticalOffset' => 0,
                 'horizontalOffset' => 0,
             ],
@@ -610,6 +633,29 @@ class DpdLabelGenerator
 
     private function redirectToZipDownload($labelsForDirectDownload)
     {
+        if ((bool)Configuration::get('dpdconnect_merge_pdf_files')) {
+            require __DIR__ . '/../vendor/myokyawhtun/pdfmerger/PDFMerger.php';
+            $pdf = new \PDFMerger\PDFMerger();
+
+            foreach ($labelsForDirectDownload as $item) {
+                $path = tempnam(sys_get_temp_dir(), 'dpdpdf');
+                $f = fopen($path, 'w');
+                fwrite($f, $item['pdf']);
+
+                $pdf->addPDF($path);
+            }
+
+
+            if (empty($this->errors)) {
+                header("Content-Type: application/zip");
+                header('Content-Disposition: attachment; filename="dpd-label-' . date("Ymdhis") . '.pdf"');
+
+                $createdPdf = $pdf->merge('browser');
+                echo $createdPdf;
+                die;
+            }
+        }
+
         $zip = new ZipArchive();
         $zipfile = tempnam(sys_get_temp_dir(), "zip");
         $res = $zip->open($zipfile, ZipArchive::CREATE);
@@ -638,7 +684,7 @@ class DpdLabelGenerator
         if ($hsFeatureId) {
             $productFeatures = $product->getFeatures();
             $productHsFeature = array_filter($productFeatures, function ($feature) use ($hsFeatureId) {
-                return $feature['id_feature'] === $hsFeatureId;
+                return $feature['id_feature'] === (int)$hsFeatureId;
             });
 
             $hsCode = new FeatureValue(current($productHsFeature)['id_feature_value']);
@@ -686,7 +732,7 @@ class DpdLabelGenerator
 
             $default = Configuration::get('dpdconnect_age_check_attribute');
             if ($default) {
-                return $default;
+                return (bool)$default;
             }
 
             // Next check if a custom mapping is set
@@ -748,7 +794,7 @@ class DpdLabelGenerator
         if ($cvFeatureId) {
             $productFeatures = $product->getFeatures();
             $productCvFeature = array_filter($productFeatures, function ($feature) use ($cvFeatureId) {
-                return $feature['id_feature'] === $cvFeatureId;
+                return $feature['id_feature'] === (int)$cvFeatureId;
             });
 
             $customsValue = new FeatureValue(current($productCvFeature)['id_feature_value']);

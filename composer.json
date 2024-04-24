@@ -4,12 +4,20 @@
     "license": "GPL-3.0-or-later",
     "minimum-stability": "dev",
     "require": {
-        "dpdconnect/php-sdk": "dev-master"
+        "dpdconnect/php-sdk": "dev-master",
+        "myokyawhtun/pdfmerger": "dev-master"
     },
     "autoload": {
         "psr-4": {
+            "DpdConnect\\": "src/",
+            "DpdConnect\\Form\\": "src/Form/",
             "DpdConnect\\classes\\": ["classes"],
             "DpdConnect\\Controller\\Admin\\": "controllers/admin"
         }
-    }
+    },
+    "config": {
+        "preferred-install": "dist",
+        "prepend-autoloader": false
+    },
+    "type": "prestashop-module"
 }

@@ -18,7 +18,7 @@ class DpdProductHelper
         }
 
         $result = Db::getInstance()->execute('
-            INSERT INTO `' . _DB_PREFIX_ . 'carrier_dpd_product` (`carrier_id`, `dpd_product_code`) 
+            INSERT INTO `' . _DB_PREFIX_ . 'carrier_dpd_product` (`carrier_id`, `dpd_product_code`)
             VALUES(' . (int)($carrierId) . ',"' . ($dpdProduct['code']) . '")
 		');
 

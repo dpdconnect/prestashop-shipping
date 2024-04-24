@@ -54,7 +54,7 @@ class AdminDpdFreshFreezeController extends FrameworkBundleAdminController
         parent::__construct();
     }
 
-    public function renderView($view = null, array $parameters = array())
+    public function renderView(string $view, array $parameters = array()): string
     {
         // Redirect back to order overview if no orderIds have been supplied
         if (empty($this->orderIds)) {

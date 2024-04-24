@@ -1,0 +1,20 @@
+services:
+    _defaults:
+        public: true
+
+    DpdConnect\Form\Modifier\ProductFormModifier:
+        autowire: true
+        public: true
+        class: DpdConnect\Form\Modifier\ProductFormModifier
+        arguments:
+            $formBuilderModifier: '@form.form_builder_modifier'
+
+    DpdConnect\Form\Type\DpdType:
+        class: DpdConnect\Form\Type\DpdType
+        parent: 'form.type.translatable.aware'
+        public: true
+        tags:
+            - { name: form.type }
+
+    dpdconnect.fresh_freeze_service:
+        class: DpdConnect\Service\FreshFreezeService

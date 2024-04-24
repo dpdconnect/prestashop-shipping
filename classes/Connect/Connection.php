@@ -34,6 +34,7 @@ class Connection
             'pluginVersion' => Version::plugin(),
         ]));
         $this->client = $clientBuilder->buildAuthenticatedByPassword($this->username, $this->password);
+        $this->client->setCacheCallable(new \DpdConnect\classes\Connect\DpdConnectCache());
 
         $this->client->getAuthentication()->setJwtToken(
             Configuration::get('dpdconnect_jwt_token') ?: null

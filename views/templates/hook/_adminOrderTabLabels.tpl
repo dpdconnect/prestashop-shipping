@@ -22,6 +22,20 @@
             {* This never gets displayed anyways *}
         </div>
         <div class="card-body">
+            {if $parcelShopId && $parcelShopData.parcelShopId}
+                <div class="form-group row">
+                    <div class="col-sm">
+                        <b>{l s='Customer selected a parcelshop!' mod='dpdconnect'}</b><br />
+                        <b>{l s='Parcelshop ID:' mod='dpdconnect'}</b> {{$parcelShopData.parcelShopId}}<br />
+                        <b>{l s='Parcelshop Company:' mod='dpdconnect'}</b> {{$parcelShopData.company}}<br />
+                        <b>{l s='Parcelshop Street:' mod='dpdconnect'}</b> {{$parcelShopData.street}} {{$parcelShopData.houseNo}}<br />
+                        <b>{l s='Parcelshop Postalcode:' mod='dpdconnect'}</b> {{$parcelShopData.zipCode}}<br />
+                        <b>{l s='Parcelshop City:' mod='dpdconnect'}</b> {{$parcelShopData.city}}<br />
+
+                    </div>
+                </div>
+            {/if}
+
             <div class="form-group row">
                 {if !$isInDb}
                     <div class="col-sm">

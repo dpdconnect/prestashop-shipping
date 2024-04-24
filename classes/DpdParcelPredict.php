@@ -77,6 +77,11 @@ class DpdParcelPredict
         return Db::getInstance()->getValue("SELECT parcelshop_id FROM " . _DB_PREFIX_ . "parcelshop WHERE order_id = " . pSQL($orderId));
     }
 
+    public function getParcelShopData($orderId)
+    {
+        return Db::getInstance()->getRow("SELECT * FROM " . _DB_PREFIX_ . "parcelshop WHERE order_id = " . pSQL($orderId));
+    }
+
     // Check if order is sent by a DPD Carrier
     public function checkIfDpdSending($orderId)
     {

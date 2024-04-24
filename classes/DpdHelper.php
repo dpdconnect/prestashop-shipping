@@ -73,6 +73,9 @@ class DpdHelper
         $helperForm->fields_value['email'] = Configuration::get('dpdconnect_email');
         $helperForm->fields_value['vatnumber'] = Configuration::get('dpdconnect_vatnumber');
         $helperForm->fields_value['eorinumber'] = Configuration::get('dpdconnect_eorinumber');
+        $helperForm->fields_value['labelformat'] = Configuration::get('dpdconnect_labelformat');
+        $helperForm->fields_value['mark_status'] = Configuration::get('dpdconnect_mark_status');
+        $helperForm->fields_value['merge_pdfs'] = Configuration::get('dpdconnect_merge_pdf_files');
         $helperForm->fields_value['spr'] = Configuration::get('dpdconnect_spr');
         $helperForm->fields_value['maps_key'] =  Configuration::get('dpdconnect_maps_key');
         $helperForm->fields_value['use_dpd_key'] =  Configuration::get('dpdconnect_use_dpd_key');
@@ -92,12 +95,29 @@ class DpdHelper
 
     public function installDB()
     {
-            $query = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'install' . DIRECTORY_SEPARATOR . 'install.sql');
+            $sql = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'install' . DIRECTORY_SEPARATOR . 'install.sql');
+            $sql = str_replace(['_PREFIX_', 'ENGINE_TYPE'], [_DB_PREFIX_, _MYSQL_ENGINE_], $sql);
+            $sql = preg_split("/;\s*[\r\n]+/", trim($sql));
 
+            foreach ($sql as $query) {
+                if (!Db::getInstance()->execute(trim($query))) {
+                    return false;
+                }
+            }
 
-            $query = preg_replace('/_PREFIX_/', _DB_PREFIX_, $query);
+            foreach (glob(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'install' . DIRECTORY_SEPARATOR . 'upgrade_*.sql') as $file) {
+                $sql = file_get_contents($file);
+                $sql = str_replace(['_PREFIX_', 'ENGINE_TYPE'], [_DB_PREFIX_, _MYSQL_ENGINE_], $sql);
+                $sql = preg_split("/;\s*[\r\n]+/", trim($sql));
 
-            return Db::getInstance()->execute($query);
+                foreach ($sql as $query) {
+                    try {
+                        !Db::getInstance()->execute($query);
+                    } catch (\Exception $e) { }
+                }
+            }
+
+            return true;
     }
 
     public function update()
@@ -183,10 +203,8 @@ class DpdHelper
 
         $geoData = $parcelPredict->getGeoData($params['address']->postcode, $params['address']->city);
         $parcelShops = $parcelPredict->getParcelShops($params['address']->postcode, $params['address']->city);
-//      var_dump($parcelShops); die;
         $cookie->geoData = serialize($geoData);
         $cookie->parcelShops = base64_encode(json_encode($parcelShops));
-//      var_dump(($cookie->parcelShops)); die;
 
 
         unset($cookie->parcelId);

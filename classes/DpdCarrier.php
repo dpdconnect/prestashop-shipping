@@ -120,7 +120,7 @@ class DpdCarrier extends CarrierModule
         $carrier = new Carrier();
 
         $carrier->url = '//tracking.dpd.de/parcelstatus?query=@';
-        $carrier->name = sprintf('%s (%s)', $dpdProduct['name'], $dpdProduct['description']);
+        $carrier->name = sprintf('%s', $dpdProduct['name']);
         // Use descriptionCheckout for default, otherwise product name
         $carrier->delay[Configuration::get('PS_LANG_DEFAULT')] = empty($dpdProduct['descriptionCheckout']) ? (string)$dpdProduct['name'] : (string)$dpdProduct['descriptionCheckout'];
         $carrier->active = 0;
@@ -166,7 +166,7 @@ class DpdCarrier extends CarrierModule
             return false;
         }
 
-        return stripos($dpdProduct['name'], 'saturday') !== false;
+        return stripos($dpdProduct['name'], 'Saturday') === false;
     }
 
     public function checkIfSaturdayAllowed()

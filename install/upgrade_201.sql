@@ -1,0 +1,1 @@
+CREATE TABLE _PREFIX_product_shipping_information (id INT AUTO_INCREMENT NOT NULL, product_id INT NOT NULL, dpd_shipping_product VARCHAR(255) NOT NULL, dpd_carrier_description VARCHAR(255) NOT NULL, PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = ENGINE_TYPE;

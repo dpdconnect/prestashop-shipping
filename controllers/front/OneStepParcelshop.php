@@ -27,9 +27,14 @@ class dpdconnectOneStepParcelshopModuleFrontController extends ModuleFrontContro
             if (Tools::getValue('parcelId')) {
                 $parcelId = Tools::getValue('parcelId');
                 $this->context->cookie->parcelId = $parcelId;
-                die($this->context->cookie->parcelId);
+            }
+
+            if (Tools::getValue('parcelshopData')) {
+                $parcelshopData = Tools::getValue('parcelshopData');
+                $this->context->cookie->parcelshopData = $parcelshopData;
             }
         }
-        die($this->context->cookie->parcelId);
+
+        die($this->context->cookie->parcelshopData);
     }
 }
