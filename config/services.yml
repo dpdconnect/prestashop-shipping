@@ -18,3 +18,9 @@ services:
 
     dpdconnect.fresh_freeze_service:
         class: DpdConnect\Service\FreshFreezeService
+
+    DpdConnect\classes\DpdLabelGenerator:
+        class: DpdConnect\classes\DpdLabelGenerator
+        public: true
+        arguments:
+            - '@prestashop.core.command_bus'

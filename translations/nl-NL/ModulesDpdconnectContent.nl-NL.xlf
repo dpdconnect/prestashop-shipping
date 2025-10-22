@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file original="admin011ibejn4frpg5fxzmk" source-language="nl-NL" target-language="nl-NL" datatype="plaintext">
+    <body>
+      <trans-unit id="fbd39fe0ecd01afaf01ea1957ef4a57c">
+        <source>No.</source>
+        <target>No.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="c004b5100501921415ccb1304705b645">
+        <source>Labelnumber</source>
+        <target>Labelnumber</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="914419aa32f04011357d3b604a86d7eb">
+        <source>Carrier</source>
+        <target>Carrier</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="991befb149a7afa6f362af2ffad29f16">
+        <source>Company and name</source>
+        <target>Company and name</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="dd7bf230fde8d4836917806aff6a6b27">
+        <source>Address</source>
+        <target>Address</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="572ed696f21038e6cc6c86bb272a3222">
+        <source>Postal code</source>
+        <target>Postal code</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="7b9cf007806ed854cd12ab800c8a982b">
+        <source>Place</source>
+        <target>Place</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="65f07b5c5b5ff255fbefbc8543f33d12">
+        <source>Reference number</source>
+        <target>Reference number</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="a66046bfd37b74462454fa864e76f14a">
+        <source>No DPD shipment selected.</source>
+        <target>No DPD shipment selected.</target>
+        <note>Line: </note>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

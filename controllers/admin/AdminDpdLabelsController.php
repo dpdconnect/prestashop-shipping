@@ -29,20 +29,23 @@ class AdminDpdLabelsController extends ModuleAdminController
     public $dpdParcelPredict;
     public $dpdLabelGenerator;
     public $delete;
-    public $return;
-    public $hasFreshFreezeData;
     public $orderIds;
+    public $parcels;
+    public $volume;
+    public $hasFreshFreezeData;
+    public $return;
 
     public function __construct()
     {
         parent::__construct();
         $dpdconnect = new dpdconnect();
-        $this->dpdLabelGenerator = $dpdconnect->dpdLabelGenerator();
-        $this->orderIds = Tools::getValue('ids_order');
-        $this->delete = Tools::getValue('delete');
-        $this->parcels = Tools::getValue('parcel');
+        $this->dpdLabelGenerator  = $dpdconnect->dpdLabelGenerator();
+        $this->orderIds           = Tools::getValue('ids_order');
+        $this->delete             = Tools::getValue('delete');
+        $this->parcels            = Tools::getValue('parcel');
+        $this->volume             = Tools::getValue('parcel_volume');
         $this->hasFreshFreezeData = Tools::getIsset('hasFreshFreezeData');
-        $this->return = (bool)Tools::getValue('return');
+        $this->return             = (bool)Tools::getValue('return');
     }
 
     public function checkErrors()
@@ -98,7 +101,7 @@ class AdminDpdLabelsController extends ModuleAdminController
             if ($this->parcels == 0) {
                 $this->parcels = 1;
             }
-            $this->dpdLabelGenerator->generateLabel($this->orderIds, $this->parcels, $this->return, $freshFreezeData);
+            $this->dpdLabelGenerator->generateLabel($this->orderIds, $this->parcels, $this->return, $this->volume, $freshFreezeData);
         }
         $this->checkErrors();
     }

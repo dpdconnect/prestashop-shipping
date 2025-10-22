@@ -89,6 +89,7 @@ class DpdHelper
         $helperForm->fields_value['dpdconnect_url'] = Configuration::get('dpdconnect_url');
         $helperForm->fields_value['callback_url'] =  Configuration::get('dpdconnect_callback_url');
         $helperForm->fields_value['async_treshold'] =  Configuration::get('dpdconnect_async_treshold');
+        $helperForm->fields_value['dpdconnect_default_package_type'] =  Configuration::get('dpdconnect_default_package_type');
 
         return $helperForm->generateForm($fields_form);
     }

@@ -31,7 +31,11 @@ class dpdconnectOneStepParcelshopModuleFrontController extends ModuleFrontContro
 
             if (Tools::getValue('parcelshopData')) {
                 $parcelshopData = Tools::getValue('parcelshopData');
-                $this->context->cookie->parcelshopData = $parcelshopData;
+                $parcelshopData = json_decode($parcelshopData, true);
+                $allowedKeys = ['parcelShopId', 'company', 'street', 'houseNo', 'state', 'isoAlpha2', 'zipCode', 'city', 'country'];
+                $parcelshopData = array_intersect_key($parcelshopData, array_flip($allowedKeys));
+
+                $this->context->cookie->parcelshopData = json_encode($parcelshopData);
             }
         }
 

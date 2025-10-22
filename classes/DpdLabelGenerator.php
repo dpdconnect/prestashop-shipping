@@ -24,6 +24,7 @@ namespace DpdConnect\classes;
 use Db;
 use Order;
 use OrderCarrier;
+use PrestaShop\PrestaShop\Core\Domain\Order\Command\BulkChangeOrderStatusCommand;
 use Tools;
 use Address;
 use Country;
@@ -36,26 +37,15 @@ use ZipArchive;
 use OrderDetail;
 use FeatureValue;
 use Configuration;
-use DpdConnect\classes\JobRepo;
-use DpdConnect\classes\Version;
-use DpdConnect\classes\BatchRepo;
 use DpdConnect\classes\enums\ParcelType;
-use DpdConnect\classes\OrderResponseTransformer;
 use DpdConnect\classes\Exceptions\InvalidRequestException;
 use DpdConnect\classes\Exceptions\InvalidResponseException;
 use DpdConnect\Sdk\ClientBuilder;
 use DpdConnect\Sdk\Objects\MetaData;
 use DpdConnect\Sdk\Objects\ObjectFactory;
-use DpdConnect\Sdk\Exceptions\ApiException;
-use DpdConnect\Sdk\Exceptions\AuthenticateException;
 use DpdConnect\Sdk\Exceptions\DpdException;
-use DpdConnect\Sdk\Exceptions\HttpException;
 use DpdConnect\Sdk\Exceptions\InvalidArgumentHttpException;
-use DpdConnect\Sdk\Exceptions\RequestException;
-use DpdConnect\Sdk\Exceptions\ServerException;
-use DpdConnect\Sdk\Exceptions\ShipmentStatusException;
-use DpdConnect\Sdk\Exceptions\ShipmentValidationException;
-use DpdConnect\Sdk\Exceptions\ValidationException;
+use PrestaShop\PrestaShop\Core\CommandBus\CommandBusInterface;
 
 class DpdLabelGenerator
 {
@@ -64,8 +54,12 @@ class DpdLabelGenerator
     public $dpdError;
     public $dpdParcelPredict;
 
-    public function __construct()
+    public ?CommandBusInterface $commandBus;
+
+    public function __construct(?CommandBusInterface $commandBus)
     {
+        $this->commandBus = $commandBus;
+
         $url = Configuration::get('dpdconnect_url');
         $username = Configuration::get('dpdconnect_username');
         $encryptedPassword = Configuration::get('dpdconnect_password');
@@ -94,7 +88,7 @@ class DpdLabelGenerator
         $this->dpdParcelPredict = new DpdParcelPredict();
     }
 
-    public function generateLabel($orderIds, $parcelCount, $return, $freshFreezeData = array())
+    public function generateLabel($orderIds, $parcelCount, $return, $volume, $freshFreezeData = array())
     {
         if (isset($this->errors['LOGIN_8'])) {
             $this->errors['LOGIN_8'] = $this->dpdError->get('LOGIN_8');
@@ -123,7 +117,7 @@ class DpdLabelGenerator
 
             foreach ($orders as $shippingType => $orderProducts) {
                 try {
-                    $labelRequests[] = $this->generateShipmentInfo($orderId, $orderProducts, $parcelCount, $return, $freshFreezeData);
+                    $labelRequests[] = $this->generateShipmentInfo($orderId, $orderProducts, $parcelCount, $return, $freshFreezeData, $volume);
                 } catch (InvalidRequestException $e) {
                     $this->errors['VALIDATION'] = 'Multiple parcels is only allowed for countries inside EU.';
                     return;
@@ -155,8 +149,14 @@ class DpdLabelGenerator
                     $orderCarrier->tracking_number = reset($labelResponse['parcelNumbers']);
 
                     if (!empty(Configuration::get('dpdconnect_mark_status'))) {
-                        $order->current_state = Configuration::get('dpdconnect_mark_status');
-                        $order->save();
+                        $idOrderState = (int)Configuration::get('dpdconnect_mark_status') ?? 0;
+                        $currentOrderState = $order->getCurrentOrderState();
+                        if ($currentOrderState && $currentOrderState->id != $idOrderState && $idOrderState !== 0) {
+                            $this->commandBus->handle(new BulkChangeOrderStatusCommand(
+                                [$order->id],
+                                $idOrderState
+                            ));
+                        }
                     }
 
                     $orderCarrier->save();
@@ -176,7 +176,7 @@ class DpdLabelGenerator
         return $this->redirectToPdfDownload($labelsForDirectDownload[0]);
     }
 
-    public function generateShipmentInfo($orderId, $orderProducts, $parcelCount, $return, $freshFreezeData)
+    public function generateShipmentInfo($orderId, $orderProducts, $parcelCount, $return, $freshFreezeData, $volume)
     {
         if ($parcelCount === null || $parcelCount === false) {
             $parcelCount = 1;
@@ -330,7 +330,8 @@ class DpdLabelGenerator
                 $orderProducts,
                 ceil($weightTotal / $parcelCount) * 100,
                 $freshFreezeData,
-                $parcelCount
+                $parcelCount,
+                $volume
             );
         } else {
             $amountOfParcels = $parcelCount;
@@ -345,6 +346,7 @@ class DpdLabelGenerator
                         (string)$orderId
                     ],
                     'weight' => (int) ceil($weightTotal / $amountOfParcels) * 100,
+                    'volume' => !empty($volume) ? $volume : Configuration::get('dpdconnect_default_package_type'),
                 ];
 
                 if ((bool)$return) {
@@ -834,7 +836,7 @@ class DpdLabelGenerator
         return array_search(strtoupper($iso2), array_column($countries, 'country'), true);
     }
 
-    private function generateFreshFreezeParcels($orderProducts, $weight, $freshFreezeData, $parcelCount)
+    private function generateFreshFreezeParcels($orderProducts, $weight, $freshFreezeData, $parcelCount, $volume)
     {
         $parcels = [];
 
@@ -850,6 +852,7 @@ class DpdLabelGenerator
                         $orderProduct['reference']
                     ],
                     'weight' => (int) $weight,
+                    'volume' => !empty($volume) ? $volume : Configuration::get('dpdconnect_default_package_type'),
                     'goodsExpirationDate' => (int)$expirationDate,
                     'goodsDescription' => mb_strcut($freshFreezeData[$orderId][$orderProduct['product_id']]['carrier_description'], 0, 30)
                 ];

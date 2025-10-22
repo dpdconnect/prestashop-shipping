@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file original="admin011ibejn4frpg5fxzmk" source-language="nl-NL" target-language="nl-NL" datatype="plaintext">
+    <body>
+      <trans-unit id="e19726b466603bc3e444dd26fbcde074">
+        <source>Customer address</source>
+        <target>Customer address</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="44749712dbec183e983dcd78a7736c41">
+        <source>Date</source>
+        <target>Date</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="1cc5884c3587b9f04dd7714df0c82b9d">
+        <source>Amount of parcels</source>
+        <target>Amount of parcels</target>
+        <note>Line: </note>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

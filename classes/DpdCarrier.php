@@ -118,8 +118,15 @@ class DpdCarrier extends CarrierModule
     public function createCarrier(array $dpdProduct)
     {
         $carrier = new Carrier();
+        $dpdProductHelper = new DpdProductHelper();
+        $products = $dpdProductHelper->getCarrierByProduct($dpdProduct);
+        
+        if ($products) {
+            $existingCarrier = $dpdProductHelper->getProductByCarrier($products['carrier_id']);
+            return $existingCarrier;
+        }
 
-        $carrier->url = '//tracking.dpd.de/parcelstatus?query=@';
+        $carrier->url = '//www.dpdgroup.com/nl/mydpd/my-parcels/search?parcelNumber=@';
         $carrier->name = sprintf('%s', $dpdProduct['name']);
         // Use descriptionCheckout for default, otherwise product name
         $carrier->delay[Configuration::get('PS_LANG_DEFAULT')] = empty($dpdProduct['descriptionCheckout']) ? (string)$dpdProduct['name'] : (string)$dpdProduct['descriptionCheckout'];
@@ -134,7 +141,6 @@ class DpdCarrier extends CarrierModule
 
 //        Configuration::updateValue($this->dpdPrefix . strtolower($prefix), $carrier->id);
 
-        $dpdProductHelper = new DpdProductHelper();
         $dpdProductHelper->mapProductToCarrier($dpdProduct, $carrier->id);
 
         return $carrier;

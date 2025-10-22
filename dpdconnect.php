@@ -37,16 +37,20 @@ use DpdConnect\classes\DpdLabelGenerator;
 use DpdConnect\classes\DpdEncryptionManager;
 use DpdConnect\classes\DpdCheckoutDeliveryStep;
 use DpdConnect\classes\DpdDeliveryOptionsFinder;
+use DpdConnect\classes\Service\SettingsDataValidator;
 use DpdConnect\Entity\ProductShippingInformation;
 use DpdConnect\Form\Modifier\ProductFormModifier;
 use DpdConnect\Sdk\Client;
+use DpdConnect\Sdk\Exceptions\AuthenticateException;
+use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
 use PrestaShop\PrestaShop\Core\Grid\Action\Bulk\Type\SubmitBulkAction;
 
 class dpdconnect extends Module
 {
-    const VERSION = '2.0';
+    const VERSION = '2.1';
 
     public $twig;
+    public $commandBus;
     public $dpdHelper;
     public $dpdCarrier;
     public $dpdParcelPredict;
@@ -82,7 +86,7 @@ class dpdconnect extends Module
         $this->dpdProductHelper = new DpdProductHelper();
 
         // Initialize basic stuff
-        $container = \PrestaShop\PrestaShop\Adapter\SymfonyContainer::getInstance();
+        $container = SymfonyContainer::getInstance();
         if ($container !== null) {
             /** @var EntityManagerInterface $entityManager */
             $this->entityManager = $container->get('doctrine.orm.entity_manager');
@@ -155,7 +159,7 @@ class dpdconnect extends Module
             Configuration::updateValue('dpdconnect_parcel_limit', 12);
         }
         if (!$this->dpdHelper->installDB()) {
-            \PrestaShopLogger::addLog('[DPD] Could not install the database', 3);
+            PrestaShopLogger::addLog('[DPD] Could not install the database', 3);
             return false;
         }
         foreach ($this->hooks as $hookName) {
@@ -165,11 +169,11 @@ class dpdconnect extends Module
             }
         }
         if (!$this->dpdHelper->update()) {
-            \PrestaShopLogger::addLog('[DPD] Update failed', 3);
+            PrestaShopLogger::addLog('[DPD] Update failed', 3);
             return false;
         }
 
-        \PrestaShopLogger::addLog('[DPD] Module installed correctly!', 1);
+        PrestaShopLogger::addLog('[DPD] Module installed correctly!', 1);
 
         return true;
     }
@@ -195,6 +199,34 @@ class dpdconnect extends Module
         }
     }
 
+    /**
+     * @return bool
+     */
+    private static function validateAccountCredentials(): bool
+    {
+        // We use these values because its representative of how the Connection class gets these values, if they are empty there is no point in doing the request
+        $passToCheck = DpdEncryptionManager::decrypt(Configuration::get('dpdconnect_password'));
+        $userToCheck = Configuration::get('dpdconnect_username');
+
+        $missingCredentials = true;
+        if($passToCheck && $userToCheck) {
+            try {
+                (new Connection)->getPublicJwtToken();
+                return true;
+            } catch (AuthenticateException $e) {
+                return false;
+            } catch (\DpdConnect\Sdk\Exceptions\HttpException $e) {
+                return false;
+            }
+        }
+
+        if($missingCredentials) {
+            return false;
+        }
+
+        return false;
+    }
+
     public function getContent()
     {
         $output = '';
@@ -211,7 +243,7 @@ class dpdconnect extends Module
             $company = strval(Tools::getValue("company"));
             $street = strval(Tools::getValue("street"));
             $postalcode = strval(Tools::getValue("postalcode"));
-            $place = strval(Tools::getValue("place"));
+            $place = strval(Tools::getValue("place")); // City
             $country = strval(Tools::getValue("country"));
             $email = strval(Tools::getValue("email") ?? '');
             $vatnumber = strval(Tools::getValue("vatnumber") ?? '');
@@ -231,38 +263,102 @@ class dpdconnect extends Module
             $callbackUrl = Tools::getValue('callback_url') ?? '';
             $asyncTreshold = Tools::getValue('async_treshold') ?? '';
             $markStatus = Tools::getValue('mark_status') ?? '';
-            $mergePdf = Tools::getValue('merge_pdfs') ?? false;
+            $mergePdf   = Tools::getValue('merge_pdfs') ?? false;
+            $defaultPackageType = Tools::getValue('dpdconnect_default_package_type') ?? '100050050';
 
-            if (
-                !(
-                empty($company) ||
-                empty($street) ||
-                empty($postalcode) ||
-                empty($place) ||
-                empty($country) ||
-                empty($email)
-                )
-            ) {
+            if (!(empty($company) || empty($street) || empty($postalcode) || empty($place) || empty($country) || empty($email))) {
                 Configuration::updateValue('dpdconnect_maps_key', $mapsKey);
                 Configuration::updateValue('dpdconnect_use_dpd_key', $useDpdKey);
+
                 Configuration::updateValue('dpdconnect_username', $connectusername);
                 if ($connectpassword) {
                     Configuration::updateValue('dpdconnect_password', $connectpassword);
                 }
-                Configuration::updateValue('dpdconnect_depot', $depot);
-                Configuration::updateValue('dpdconnect_company', $company);
+
+                // Depot Validation
+                $error = SettingsDataValidator::validateDepot($depot);
+                if (empty($error)) {
+                    Configuration::updateValue('dpdconnect_depot', $depot);
+                } else {
+                    $output .= $this->displayError($this->l('Depot Number - ' . $error));
+                }
+
+                // Company Validation
+                $error = SettingsDataValidator::validateCompany($company);
+                if (empty($error)) {
+                    Configuration::updateValue('dpdconnect_company', $company);
+                } else {
+                    $output .= $this->displayError($this->l('Company Name - ' . $error));
+                }
+
+                // Street Validation
+                $error = SettingsDataValidator::validateStreet($street);
+                if (empty($error)) {
+                    Configuration::updateValue('dpdconnect_street', $street);
+                } else {
+                    $output .= $this->displayError($this->l('Street - ' . $error));
+                }
+
+                // PostalCode Validation
+                $error = SettingsDataValidator::validatePostalCode($postalcode);
+                if (empty($error)) {
+                    Configuration::updateValue('dpdconnect_postalcode', $postalcode);
+                } else {
+                    $output .= $this->displayError($this->l('Postal Code - ' . $error));
+                }
+
+                // City Validation
+                $error = SettingsDataValidator::validateCity($place);
+                if (empty($error)) {
+                    Configuration::updateValue('dpdconnect_place', $place);
+                } else {
+                    $output .= $this->displayError($this->l('City - ' . $error));
+                }
+
+                // Country Validation
+                $error = SettingsDataValidator::validateCountryCode($country);
+                if (empty($error)) {
+                    Configuration::updateValue('dpdconnect_country', $country);
+                } else {
+                    $output .= $this->displayError($this->l('Country - ' . $error));
+                }
+
+                // Email Validation
+                $error = SettingsDataValidator::validateEmail($email);
+                if (empty($error)) {
+                    Configuration::updateValue('dpdconnect_email', $email);
+                } else {
+                    $output .= $this->displayError($this->l('E-Mail - ' . $error));
+                }
+
+                // VAT Validation
+                $error = SettingsDataValidator::validateVatNumber($vatnumber);
+                if (empty($error)) {
+                    Configuration::updateValue('dpdconnect_vatnumber', $vatnumber);
+                } else {
+                    $output .= $this->displayError($this->l('VAT Number - ' . $error));
+                }
+
+                // Default Product Country Origin Validation
+                $error = SettingsDataValidator::validateDefaultProductCountryOfOriginCode($defaultProductCountryOfOrigin);
+                if (empty($error)) {
+                    Configuration::updateValue('dpdconnect_default_product_country_of_origin', $defaultProductCountryOfOrigin);
+                } else {
+                    $output .= $this->displayError($this->l('Default Product Country of Origin - ' . $error));
+                }
+
+                // HCS Validation
+                $error = SettingsDataValidator::validateHarmonizedSystemCode($defaultProductHcs);
+                if (empty($error)) {
+                    Configuration::updateValue('dpdconnect_default_product_hcs', $defaultProductHcs);
+                } else {
+                    $output .= $this->displayError($this->l('HCS Code - ' . $error));
+                }
+
                 Configuration::updateValue('dpdconnect_labelformat', $labelFormat);
-                Configuration::updateValue('dpdconnect_street', $street);
-                Configuration::updateValue('dpdconnect_postalcode', $postalcode);
-                Configuration::updateValue('dpdconnect_place', $place);
-                Configuration::updateValue('dpdconnect_country', $country);
-                Configuration::updateValue('dpdconnect_email', $email);
-                Configuration::updateValue('dpdconnect_vatnumber', $vatnumber);
                 Configuration::updateValue('dpdconnect_eorinumber', $eorinumber);
                 Configuration::updateValue('dpdconnect_spr', $spr);
-                Configuration::updateValue('dpdconnect_default_product_hcs', $defaultProductHcs);
                 Configuration::updateValue('dpdconnect_default_product_weight', $defaultProductWeight);
-                Configuration::updateValue('dpdconnect_default_product_country_of_origin', $defaultProductCountryOfOrigin);
                 Configuration::updateValue('dpdconnect_age_check_attribute', $ageCheckAttribute);
                 Configuration::updateValue('dpdconnect_customs_value_feature', $customsValueFeature);
                 Configuration::updateValue('dpdconnect_hs_code_feature', $hsCodeFeature);
@@ -271,7 +367,15 @@ class dpdconnect extends Module
                 Configuration::updateValue('dpdconnect_async_treshold', $asyncTreshold);
                 Configuration::updateValue('dpdconnect_mark_status', $markStatus);
                 Configuration::updateValue('dpdconnect_merge_pdf_files', $mergePdf);
-                $output .= $this->displayConfirmation($this->l('Settings updated'));
+                Configuration::updateValue('dpdconnect_default_package_type', $defaultPackageType);
+
+                $credentialsMessage = self::validateAccountCredentials();
+
+                if ($credentialsMessage) {
+                    $output .= $this->displayConfirmation($this->l('Settings updated!'));
+                } else {
+                    $output .= $this->displayError($this->l('Settings updated - but could not validate account credentials, please check your username and password'));
+                }
             } else {
                 $output .= $this->displayError($this->l('Invalid Configuration value'));
             }
@@ -373,6 +477,32 @@ class dpdconnect extends Module
                     ],
                 ],
                 [
+                    'type' => 'select',
+                    'required' => true,
+                    'class' => 't',
+                    'label' => $this->l('Default Package Type'),
+                    'desc' => $this->l('Set the default package type'),
+                    'name' => 'dpdconnect_default_package_type',
+                    'options' => [
+                        'query' => [
+                            [
+                                'default_package_type' => '100050050',
+                                'name' => $this->l('Normal Parcel'),
+                                "position" => 1,
+                                "id_lang" => 1,
+                            ],
+                            [
+                                'default_package_type' => '015010010',
+                                'name' => $this->l('Small Parcel'),
+                                "position" => 2,
+                                "id_lang" => 1,
+                            ],
+                        ],
+                        'id' => 'default_package_type',
+                        'name' => 'name',
+                    ],
+                ],
+                [
                     'type' => 'radio',
                     'label' => $this->l("Merge PDF files "),
                     'desc' => $this->l('With this option you can select if you want to get a merged PDF file or a zip file when using the bulk select when genereting labels.'),
@@ -442,7 +572,7 @@ class dpdconnect extends Module
                     'type' => 'text',
                     'label' => $this->l('Vat Number'),
                     'name' => 'vatnumber',
-                    'required' => false
+                    'required' => true
                 ],
                 [
                     'type' => 'text',
@@ -508,7 +638,7 @@ class dpdconnect extends Module
                     'label' => $this->l('Default Country of Origin'),
                     'desc' => $this->l('Use ISO 3166-1 alpha-2 codes (e.g. NL, BE, DE, FR, etc.)'),
                     'name' => 'default_product_country_of_origin',
-                    'required' => false
+                    'required' => true
                 ],
                 [
                     'type' => 'select',
@@ -538,7 +668,7 @@ class dpdconnect extends Module
                     'type' => 'text',
                     'label' => $this->l('Default Harmonized System Code'),
                     'name' => 'default_product_hcs',
-                    'required' => false
+                    'required' => true
                 ],
             ],
         ];
@@ -609,7 +739,7 @@ class dpdconnect extends Module
             $mapsKey = Configuration::get('gmaps_key');
         }
 
-        $link = new \Link();
+        $link = new Link();
         $scope->assign([
             'baseUri' => __PS_BASE_URI__,
             'parcelshopId' => $this->dpdCarrier->getLatestCarrierByReferenceId($this->dpdProductHelper->getDpdParcelshopCarrierId()),
@@ -702,7 +832,8 @@ class dpdconnect extends Module
                 'urlGenerateReturnLabel' => $urlGenerateReturnLabel,
                 'isReturnInDb' => DpdLabelGenerator::getLabelOutOfDb($orderId, true),
                 'deleteGeneratedLabel' => $urlGenerateLabel . '&delete=true',
-                'deleteGeneratedRetourLabel' => $urlGenerateReturnLabel . '&delete=true'
+                'deleteGeneratedRetourLabel' => $urlGenerateReturnLabel . '&delete=true',
+                'selected_package_type' => Configuration::get('dpdconnect_default_package_type'),
             ]);
             return $this->display(__FILE__, '_adminOrderTabLabels.tpl');
         }
@@ -841,11 +972,19 @@ class dpdconnect extends Module
 
     public function dpdLabelGenerator()
     {
-        return new DpdLabelGenerator();
+        return $this->get(DpdLabelGenerator::class);
     }
 
     public function dpdShippingList()
     {
         return new DpdShippingList();
+    }
+
+    /**
+     * @return true
+     */
+    public function isUsingNewTranslationSystem(): bool
+    {
+        return true;
     }
 }
