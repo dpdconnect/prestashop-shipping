@@ -2,7 +2,7 @@
 <module>
     <name>dpdconnect</name>
     <displayName><![CDATA[DPD Connect]]></displayName>
-    <version><![CDATA[2.0]]></version>
+    <version><![CDATA[2.1]]></version>
     <description><![CDATA[Shipping intergration with DPD Connect.]]></description>
     <author><![CDATA[DPD Nederland B.V.]]></author>
     <tab><![CDATA[shipping_logistics]]></tab>

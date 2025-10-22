@@ -61,6 +61,13 @@
                                 <button class="btn btn-default" id="plus-label" type="button">+</button>
                             </span>
                         </div>
+                        <div class="input-group col-sm-4" style="padding-left: 0; margin-left: 0; margin-top: 5px;">
+                            <label for="parcel-volume"></label>
+                            <select class="form-control" id="parcel-volume">
+                                <option value="150010010" {if $selected_package_type == "150010010"} selected{/if}>Normal Parcel</option>
+                                <option value="015010010" {if $selected_package_type == "015010010"} selected{/if}>Small Parcel</option>
+                            </select>
+                        </div>
                     </div>
                 {else}
                     <div style="margin-left: 15px;">
@@ -130,38 +137,46 @@
 
 {literal}
     <script type="text/javascript">
-        function setAmountOfParcels(inputField, minButton, plusButton, link) {
+        function setAmountOfParcels(inputField, minButton, plusButton, volumeField, link) {
             if (inputField.val() !== undefined && inputField.val() !== '') {
                 var url = link.attr('href');
+
                 minButton.click(function () {
                     var parcel = inputField.val();
                     if (parcel > 1) {
                         parcel -= 1;
                     }
                     inputField.val(parcel);
-                    var newurl = url + '&parcel=' + inputField.val();
-                    link.attr('href', newurl);
+                    updateUrl();
                 });
+
                 plusButton.click(function () {
                     var parcel = parseInt(inputField.val());
                     if (parcel < 100) {
                         parcel += 1;
                     }
                     inputField.val(parcel);
-                    var newurl = url + '&parcel=' + inputField.val();
-                    link.attr('href', newurl);
+                    updateUrl();
                 });
+
+                volumeField.change(function () {
+                    updateUrl();
+                });
+
                 link.click(function (e) {
                     e.preventDefault();
-                    var newurl = url + '&parcel=' + inputField.val();
-                    window.location.href = newurl;
+                    updateUrl();
+                    window.location.href = link.attr('href');
                 });
+
+                function updateUrl() {
+                    var newUrl = url + '&parcel=' + inputField.val() + '&parcel_volume=' + volumeField.val();
+                    link.attr('href', newUrl);
+                }
             }
         }
 
-        setAmountOfParcels($('#parcel'), $('#min-label'), $('#plus-label'), $('#generate-label'));
-        setAmountOfParcels($('#parcel-retour'), $('#min-label-retour'), $('#plus-label-retour'), $('#generate-label-retour'))
-
-
+        setAmountOfParcels($('#parcel'), $('#min-label'), $('#plus-label'), $('#parcel-volume'), $('#generate-label'));
+        setAmountOfParcels($('#parcel-retour'), $('#min-label-retour'), $('#plus-label-retour'), $('#parcel-volume'), $('#generate-label-retour'));
     </script>
 {/literal}

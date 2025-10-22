@@ -1,0 +1,532 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file original="admin011ibejn4frpg5fxzmk" source-language="nl-NL" target-language="nl-NL" datatype="plaintext">
+    <body>
+      <trans-unit id="ca60bbbabeaf60f6ccb6a36b0bf762af">
+        <source>DPD Connect</source>
+        <target>DPD Connect</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="317d7af01e0ccf1d76294776d4ed6ac3">
+        <source>Shipping intergration with DPD Connect.</source>
+        <target>Shipping intergration with DPD Connect.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="876f23178c29dc2552c0b48bf23cd9bd">
+        <source>Are you sure you want to uninstall?</source>
+        <target>Are you sure you want to uninstall?</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="0f40e8817b005044250943f57a21c5e7">
+        <source>No name provided</source>
+        <target>No name provided</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="7faf55fccf0937093c71df6e3ee4df10">
+        <source>DPD configuration</source>
+        <target>DPD configuration</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="90f620a1faca210e9d6f99bc9b621827">
+        <source>DPD Product Attributes</source>
+        <target>DPD Product Attributes</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="3c12e620f60815609db42d373319db7e">
+        <source>Batches</source>
+        <target>Batches</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="12ceff2290bb9039beaa8f36d5dec226">
+        <source>Jobs</source>
+        <target>Jobs</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="c888438d14855d7d96a2724ee9c306bd">
+        <source>Settings updated</source>
+        <target>Settings updated</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="fe5d926454b6a8144efce13a44d019ba">
+        <source>Invalid Configuration value</source>
+        <target>Invalid Configuration value</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="ff73074ccafb0bcfc1c49a09ceb6532f">
+        <source>Account Settings</source>
+        <target>Account Settings</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="2874c1ab81ef665ffa111bdc45fa2600">
+        <source>DPD-Connect username</source>
+        <target>DPD-Connect username</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="b400314c333fcb84a116a83edfd87a78">
+        <source>DPD-Connect password</source>
+        <target>DPD-Connect password</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="be81995457945cb2353ce6d2765f8780">
+        <source>DPD-Connect depot</source>
+        <target>DPD-Connect depot</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="5e06d5ebfb655b97d9bfb613c80bbf3f">
+        <source>Google Maps API key</source>
+        <target>Google Maps API key</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="46eaf6941fb1323456f738d2e3aa71c3">
+        <source>Use DPD's Google Maps API Key</source>
+        <target>Use DPD's Google Maps API Key</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="42254861629de7779970aebc6feae51e">
+        <source>These may be subject to rate limiting, high volume users should use their own Google keys.</source>
+        <target>These may be subject to rate limiting, high volume users should use their own Google keys.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="93cba07454f06a4a960172bbd6e2a435">
+        <source>Yes</source>
+        <target>Yes</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="bafd7322c6e97d25b6299b5d6fe8920b">
+        <source>No</source>
+        <target>No</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="c54c1f193e662875ec98849101cd12bf">
+        <source>Label format</source>
+        <target>Label format</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="64ec50a88b86df4dd5c3d35a0ca18662">
+        <source>Change order status</source>
+        <target>Change order status</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="e5c1537c43f9dcd3154b68d51807d844">
+        <source>Change order status after a label is created. If you do not want to change the order status, set to Disabled.</source>
+        <target>Change order status after a label is created. If you do not want to change the order status, set to Disabled.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="ef08ac9a73fad7d33c55399b7dd4d18e">
+        <source>Default Package Type</source>
+        <target>Default Package Type</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="619c5ef1ab15f4caa606298301c27020">
+        <source>Set the default package type</source>
+        <target>Set the default package type</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="b06656bf02c9f55662c9a990b9755d07">
+        <source>Normal Parcel</source>
+        <target>Normal Parcel</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="464e670aa24b21b47f991408cb034b22">
+        <source>Small Parcel</source>
+        <target>Small Parcel</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="544bc3cbf33a21c7da886e5f31a9838f">
+        <source>Merge PDF files </source>
+        <target>Merge PDF files</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="ccbbb7ad32472b7492c030b2dc77da90">
+        <source>With this option you can select if you want to get a merged PDF file or a zip file when using the bulk select when genereting labels.</source>
+        <target>With this option you can select if you want to get a merged PDF file or a zip file when using the bulk select when genereting labels.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="48974cc3df177e6b565c39aa155458cd">
+        <source>Shipping Address</source>
+        <target>Shipping Address</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="c281f92b77ba329f692077d23636f5c9">
+        <source>Company name</source>
+        <target>Company name</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="4596571fa48960b8b24191e0c8ece4e5">
+        <source>Street + house number</source>
+        <target>Street + house number</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="25f75488c91cb6c3bab92672e479619f">
+        <source>Postal Code</source>
+        <target>Postal Code</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="7b9cf007806ed854cd12ab800c8a982b">
+        <source>Place</source>
+        <target>Place</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="d5aea6257900e0b66f0d407fbbe271aa">
+        <source>Country code</source>
+        <target>Country code</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="f8f76f09eecc343ed6b62e780e7c1d53">
+        <source>Use ISO 3166-1 alpha-2 codes (e.g. NL, BE, DE, FR, etc.)</source>
+        <target>Use ISO 3166-1 alpha-2 codes (e.g. NL, BE, DE, FR, etc.)</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="ce8ae9da5b7cd6c3df2929543a9af92d">
+        <source>Email</source>
+        <target>Email</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="5b4848ac60ff06ac343e5e36f7cf4157">
+        <source>Vat Number</source>
+        <target>Vat Number</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="9c630a7eb0860a4ef6cae013bedc8ba1">
+        <source>Eori Number</source>
+        <target>Eori Number</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="5e4a09e3124ff9b24c6b804e0ddfd08a">
+        <source>HMRC number</source>
+        <target>HMRC number</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="3ee95523c811917f8cf0b1fb40e56ec4">
+        <source>Mandatory if the value of the parcel is ≤ £ 135.</source>
+        <target>Mandatory if the value of the parcel is ≤ £ 135.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="6cca136d1846ffcd272db5faf7d5281f">
+        <source>Product settings</source>
+        <target>Product settings</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="75c3f47fae048b433f3ec12a3cde3147">
+        <source>Default product weight</source>
+        <target>Default product weight</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="060b8e17838684bba6c7e7ec7179e6ed">
+        <source>Customs value Feature</source>
+        <target>Customs value Feature</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="399abd9747f67197333acfc387add3bc">
+        <source>Select the product feature where the customs value is defined. If features are not used for customs value, leave empty to use DPD Product attributes or regular product price.</source>
+        <target>Select the product feature where the customs value is defined. If features are not used for customs value, leave empty to use DPD Product attributes or regular product price.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="e780f99b7c32744551e4d07dc6735496">
+        <source>Country of origin Feature</source>
+        <target>Country of origin Feature</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="0288a5bd2262965deae51b24a1c2b71c">
+        <source>Select the product feature where the product of origin is defined. If features are not used for country of origin, leave empty.</source>
+        <target>Select the product feature where the product of origin is defined. If features are not used for country of origin, leave empty.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="93ba79756f1301828a100d33e796cf1a">
+        <source>Default Country of Origin</source>
+        <target>Default Country of Origin</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="02796cd2370e6532479cbc6cbf06da40">
+        <source>Harmonized System Code Feature</source>
+        <target>Harmonized System Code Feature</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="e2f3a8bea4115da56e4de8785a6d7049">
+        <source>Select the product feature where the Harmonized System Code is defined. If features are not used for harmonized system codes, leave empty.</source>
+        <target>Select the product feature where the Harmonized System Code is defined. If features are not used for harmonized system codes, leave empty.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="713709c3414078e14f4819bc0bb57f49">
+        <source>Age check attribute</source>
+        <target>Age check attribute</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="911c0fa826f0e4a23702b64a78bfaec6">
+        <source>Select the attribute used for age check</source>
+        <target>Select the attribute used for age check</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="bd05ae3cabecbef295dce071d78433f8">
+        <source>Default Harmonized System Code</source>
+        <target>Default Harmonized System Code</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="fe4c6a5e7bd6793b37370e4e46daf998">
+        <source>Advanced settings</source>
+        <target>Advanced settings</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="5ed40f7e0eb876b6c98d5424c3111873">
+        <source>DPD-Connect url</source>
+        <target>DPD-Connect url</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="971aa940ab12731eefcaf9864ea239c4">
+        <source>Callback URL</source>
+        <target>Callback URL</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="5755408b0e481aad043aff50a86a04d5">
+        <source>Async treshold</source>
+        <target>Async treshold</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="c9cc8cce247e49bae79f15173ce97354">
+        <source>Save</source>
+        <target>Save</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="fe27fed4f81689292ae6ed348c1c420a">
+        <source>Print DPD Shipping List</source>
+        <target>Print DPD Shipping List</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="f0ae7e9b60bb2ed2750e36fe58684853">
+        <source>Print DPD Labels</source>
+        <target>Print DPD Labels</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="036dbd317f26ad8e677ee8716dfdb934">
+        <source>Print DPD Return Labels</source>
+        <target>Print DPD Return Labels</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="7294aa1b6825f5cd777c1fa1f663fe04">
+        <source>Please select a parcelshop</source>
+        <target>Please select a parcelshop</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="2dd1fa4cde98d33b69df423ffc5bcc8a">
+        <source>Not allowed to have more than 50 parcel's</source>
+        <target>Not allowed to have more than 50 parcel's</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="bedddefbeb4717dda84757e24374ed01">
+        <source>The ID %s is not set</source>
+        <target>The ID %s is not set</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="63037434bfe80bd8b81f2635e3f5481e">
+        <source>The ID %s doesn't exist</source>
+        <target>The ID %s doesn't exist</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="6fa1485364e84dfae5bc6203023558df">
+        <source>The order %s is not shipped by DPD</source>
+        <target>The order %s is not shipped by DPD</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="f492b8556e7954fc41ce995ef81db053">
+        <source>The weight of one parcel can't be higher then 31.5. Try to ship it in more parcel's</source>
+        <target>The weight of one parcel can't be higher then 31.5. Try to ship it in more parcel's</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="b5e909e4428cb037ef0defb5b7efa248">
+        <source>The order %s has been canceled</source>
+        <target>The order %s has been canceled</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="fd1dc9fd3b4fdfa49a55b95e00d5f027">
+        <source>The DelisId or DelisPassword is wrong</source>
+        <target>The DelisId or DelisPassword is wrong</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="952e8108e46e943af427c26961a4355a">
+        <source>Something went wrong while printing the label</source>
+        <target>Something went wrong while printing the label</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="5c5d4e3e3a32d2c2ccabd60e8cf3a6d5">
+        <source>Field is empty.</source>
+        <target>Veld is leeg.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="611f908993e37a6319580ac90bc674c0">
+        <source>Value is too long – max %d characters.</source>
+        <target>Waarde is te lang – max %d tekens.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="9b57479356b0d934582f5ff067a918ec">
+        <source>Value is too short – min %d characters.</source>
+        <target>Waarde is te kort – min %d tekens.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="15c2d85f1fae22a3c3a0594510a1f611">
+        <source>Request</source>
+        <target>Request</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="7b2f31b90fe1c2cc33a52233c1925df3">
+        <source>Queued</source>
+        <target>Queued</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="643562a9ae7099c8aabfdc93478db117">
+        <source>Processing</source>
+        <target>Processing</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="505a83f220c02df2f85c3810cd9ceb38">
+        <source>Success</source>
+        <target>Success</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="d7c8c85bf79bbe1b7188497c32c3b0ca">
+        <source>Failed</source>
+        <target>Failed</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="57bf1b3684e72837a341a7bb19005351">
+        <source>Partially failed</source>
+        <target>Partially failed</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="d3b206d196cd6be3a2764c1fb90b200f">
+        <source>Delete selected</source>
+        <target>Delete selected</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="e25f0ecd41211b01c83e5fec41df4fe7">
+        <source>Delete selected items?</source>
+        <target>Delete selected items?</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="97f08a40f22a625d0cbfe03db3349108">
+        <source>Product ID</source>
+        <target>Product ID</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="5ee9450ed51089f729f6c67a92760276">
+        <source>HS Code</source>
+        <target>HS Code</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="ae55d8ec1389ea3c53554fa245068614">
+        <source>Customs Value</source>
+        <target>Customs Value</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="41d446cb1052c5e6059c50df63ae7aab">
+        <source>Country of Origin</source>
+        <target>Country of Origin</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="49da91bda5a6ff7e3d7ed8c3355070e6">
+        <source>Age Check</source>
+        <target>Age Check</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="0fac0eac6fab96c761da5865e1d6d8e2">
+        <source>Product ID:</source>
+        <target>Product ID:</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="1e5327baddf2142cadac169025a4ffc7">
+        <source>HS Code:</source>
+        <target>HS Code:</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="b59e2654445b0665f0b5aa4eef7e8d6b">
+        <source>Customs Value:</source>
+        <target>Customs Value:</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="37228410aff3bc359035c95c1b11ccf9">
+        <source>Country of Origin:</source>
+        <target>Country of Origin:</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="a96a19c1bd60ba209a78a51884258e46">
+        <source>Age check:</source>
+        <target>Age check:</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="b718adec73e04ce3ec720dd11a06a308">
+        <source>ID</source>
+        <target>ID</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="5f2b9345f9bbd74079b99d6fcf461408">
+        <source>Created at</source>
+        <target>Created at</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="f4e7f140ef107de9d57504bb4af877bb">
+        <source>Batch ID</source>
+        <target>Batch ID</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="d79cf3f429596f77db95c65074663a54">
+        <source>Order ID</source>
+        <target>Order ID</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="ec53a8c4f07baed5d8825072c89799be">
+        <source>Status</source>
+        <target>Status</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="a1fa27779242b4902f7ae3bdd5c6d508">
+        <source>Type</source>
+        <target>Type</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="902b0d55fddef6f8d651fe1035b7d4bd">
+        <source>Error</source>
+        <target>Error</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="4c2a8fe7eaf24721cc7a9f0175115bd4">
+        <source>Message</source>
+        <target>Message</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="ff7638451e74022fa473e4fc85b39ca8">
+        <source>Shipping label</source>
+        <target>Shipping label</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="44d95c5d6206057b4a9f266567299891">
+        <source>Return label</source>
+        <target>Return label</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="e0548fbae600ad646c16cde6a45297ed">
+        <source>Saturday label</source>
+        <target>Saturday label</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="3db4628dd9a15f3a4b755f2c5de7f633">
+        <source>Label is deleted succesfully</source>
+        <target>Label is deleted succesfully</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="db6026eff4735d2653ba88208fba45fb">
+        <source>Shipment count</source>
+        <target>Shipment count</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="a65878a903872ac57d7f670f09863cba">
+        <source>Success count</source>
+        <target>Success count</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="1504c4413ce3bbf4103c137674c53cb3">
+        <source>Failure count</source>
+        <target>Failure count</target>
+        <note>Line: </note>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

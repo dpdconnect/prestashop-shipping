@@ -6,6 +6,8 @@ use Configuration;
 use DpdConnect\classes\Version;
 use DpdConnect\Sdk\ClientBuilder;
 use DpdConnect\Sdk\Common\HttpClient;
+use DpdConnect\Sdk\Exceptions\AuthenticateException;
+use DpdConnect\Sdk\Exceptions\HttpException;
 use DpdConnect\Sdk\Objects\MetaData;
 use DpdConnect\Sdk\Objects\ObjectFactory;
 use DpdConnect\classes\DpdEncryptionManager;
@@ -27,6 +29,7 @@ class Connection
         if (!$encryptedPassword) {
             throw new Exception('No credentials provided');
         }
+
         $this->password = DpdEncryptionManager::decrypt($encryptedPassword);
         $clientBuilder = new ClientBuilder($this->url, ObjectFactory::create(MetaData::class, [
             'webshopType' => Version::type(),
@@ -46,6 +49,10 @@ class Connection
         });
     }
 
+    /**
+     * @throws AuthenticateException
+     * @throws HttpException
+     */
     public function getPublicJwtToken()
     {
         $token = new Token(
