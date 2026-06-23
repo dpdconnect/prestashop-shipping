@@ -24,6 +24,7 @@ namespace DpdConnect\classes;
 use Db;
 use Order;
 use OrderCarrier;
+use OrderHistory;
 use PrestaShop\PrestaShop\Core\Domain\Order\Command\BulkChangeOrderStatusCommand;
 use Tools;
 use Address;
@@ -116,14 +117,31 @@ class DpdLabelGenerator
             }
 
             foreach ($orders as $shippingType => $orderProducts) {
+                $missing = $this->validateOrderShippingData($orderProducts, $volume);
+                if (!empty($missing)) {
+                    $this->errors['MISSING_DATA_' . $orderId] = sprintf(
+                        'Order #%s skipped: missing product data → %s. Fix on the product page in PrestaShop, then re-run.',
+                        $orderId,
+                        implode('; ', $missing)
+                    );
+                    continue;
+                }
                 try {
                     $labelRequests[] = $this->generateShipmentInfo($orderId, $orderProducts, $parcelCount, $return, $freshFreezeData, $volume);
                 } catch (InvalidRequestException $e) {
-                    $this->errors['VALIDATION'] = 'Multiple parcels is only allowed for countries inside EU.';
-                    return;
+                    $this->errors['VALIDATION_' . $orderId] = sprintf(
+                        'Order #%s skipped: multiple parcels are only allowed for countries inside the EU.',
+                        $orderId
+                    );
+                    continue;
                 }
             }
         }
+
+        // Snapshot validation-time errors so we can distinguish them from API-call errors below.
+        // $this->errors starts as null on a fresh instance (declared without a default),
+        // so guard count() — passing null to count() is a TypeError on PHP 8.
+        $preApiErrorCount = is_array($this->errors) ? count($this->errors) : 0;
 
         if (count($labelRequests)) {
             $asyncTreshold = (int) Configuration::get('dpdconnect_async_treshold');
@@ -131,7 +149,10 @@ class DpdLabelGenerator
                 $asyncTreshold = 10;
             }
             $labelResponses = $this->requestLabels($labelRequests, $return);
-            if ($this->errors) {
+            // Only abort if requestLabels() itself produced new errors; pre-existing
+            // per-order validation errors must not block storing the successful labels.
+            $postApiErrorCount = is_array($this->errors) ? count($this->errors) : 0;
+            if ($postApiErrorCount > $preApiErrorCount) {
                 return;
             }
             if (count($labelRequests) >= $asyncTreshold) {
@@ -144,22 +165,15 @@ class DpdLabelGenerator
                         'mpsId' => $labelResponse['shipmentIdentifier'],
                     ];
 
-                    $order = new Order($orderId);
-                    $orderCarrier = new OrderCarrier($order->getIdOrderCarrier());
-                    $orderCarrier->tracking_number = reset($labelResponse['parcelNumbers']);
-
-                    if (!empty(Configuration::get('dpdconnect_mark_status'))) {
-                        $idOrderState = (int)Configuration::get('dpdconnect_mark_status') ?? 0;
-                        $currentOrderState = $order->getCurrentOrderState();
-                        if ($currentOrderState && $currentOrderState->id != $idOrderState && $idOrderState !== 0) {
-                            $this->commandBus->handle(new BulkChangeOrderStatusCommand(
-                                [$order->id],
-                                $idOrderState
-                            ));
-                        }
-                    }
-
-                    $orderCarrier->save();
+                    // Derive the order from the response itself. Previously this used the
+                    // stale $orderId left over from the request-building loop above, so in
+                    // multi-order batches every response was written to the LAST order and
+                    // all other orders got neither a tracking number nor a status change.
+                    self::applyLabelToOrder(
+                        $labelResponse['orderId'],
+                        $labelResponse['parcelNumbers'],
+                        $this->commandBus
+                    );
                 }
             }
         }
@@ -174,6 +188,62 @@ class DpdLabelGenerator
         }
 
         return $this->redirectToPdfDownload($labelsForDirectDownload[0]);
+    }
+
+    /**
+     * Writes the DPD tracking number onto the order's carrier and, when configured,
+     * advances the order to the "label generated" status.
+     *
+     * Shared by the synchronous label flow (generateLabel, for batches below the
+     * async threshold) and the asynchronous callback (controllers/front/callback.php,
+     * for bulk batches) so both paths update the order identically. The async/bulk
+     * path historically skipped this entirely, which is why bulk-generated labels
+     * never updated the order's tracking number or status.
+     *
+     * @param int|string               $orderId       PrestaShop order id
+     * @param string[]                 $parcelNumbers Parcel numbers returned by DPD
+     * @param CommandBusInterface|null $commandBus    When available (admin/sync
+     *        context) the PrestaShop command bus is used, preserving the existing
+     *        behaviour. In the front-controller callback context the order-status
+     *        command handler is not registered, so we fall back to OrderHistory.
+     */
+    public static function applyLabelToOrder($orderId, array $parcelNumbers, ?CommandBusInterface $commandBus = null)
+    {
+        if (empty($parcelNumbers)) {
+            return;
+        }
+
+        $order = new Order($orderId);
+        $orderCarrier = new OrderCarrier($order->getIdOrderCarrier());
+        $orderCarrier->tracking_number = reset($parcelNumbers);
+        $orderCarrier->save();
+
+        if (empty(Configuration::get('dpdconnect_mark_status'))) {
+            return;
+        }
+
+        $idOrderState = (int) Configuration::get('dpdconnect_mark_status');
+        if ($idOrderState === 0) {
+            return;
+        }
+
+        $currentOrderState = $order->getCurrentOrderState();
+        if (!$currentOrderState || $currentOrderState->id == $idOrderState) {
+            return;
+        }
+
+        if ($commandBus !== null) {
+            $commandBus->handle(new BulkChangeOrderStatusCommand([$order->id], $idOrderState));
+
+            return;
+        }
+
+        // Front-controller / callback context: change the state directly via
+        // OrderHistory, which works without the admin command-bus handlers.
+        $history = new OrderHistory();
+        $history->id_order = (int) $order->id;
+        $history->changeIdOrderState($idOrderState, $order, true);
+        $history->addWithemail(true);
     }
 
     public function generateShipmentInfo($orderId, $orderProducts, $parcelCount, $return, $freshFreezeData, $volume)
@@ -206,10 +276,9 @@ class DpdLabelGenerator
         $saturdayDelivery = false;
         $orderType = 'consignment';
 
+        // Weight per line is trusted here because generateLabel() validates every product
+        // has product_weight > 0 before this method runs. See validateOrderShippingData().
         foreach ($orderProducts as $orderProduct) {
-            if ((float)$orderProduct['product_weight'] <= 0) {
-                $orderProduct['product_weight'] = '5.0';
-            }
             $weightTotal += ((float)$orderProduct['product_weight'] / 100) * (int)$orderProduct['product_quantity'];
         }
         $weightTotal *= 100;
@@ -340,13 +409,14 @@ class DpdLabelGenerator
                 $amountOfParcels = $amountOfUniqueSKUs;
             }
 
+            $parcelVolume = $this->buildVolumeCode($orderProducts, $volume);
             for ($x = 1; $x <= $amountOfParcels; $x++) {
                 $parcelInfo = [
                     'customerReferences' => [
                         (string)$orderId
                     ],
                     'weight' => (int) ceil($weightTotal / $amountOfParcels) * 100,
-                    'volume' => !empty($volume) ? $volume : Configuration::get('dpdconnect_default_package_type'),
+                    'volume' => $parcelVolume,
                 ];
 
                 if ((bool)$return) {
@@ -372,10 +442,9 @@ class DpdLabelGenerator
             $hsCode = $this->getHsCode($product);
             $customsValue = $this->getCustomsValue($product);
             $originCountry = $this->getCountryOfOrigin($product);
-            $weight = (int) ceil($product->weight) * 100; // Default weight is 0.000000
-            if ($weight === 0) {
-                $weight = Configuration::get('dpdconnect_default_product_weight');
-            }
+            // Live product weight is trusted here because generateLabel() validates
+            // every product's weight > 0 before this method runs.
+            $weight = (int) ceil($product->weight) * 100;
 
             $amount = $product->price * $orderProduct['product_quantity'];
             $totalAmount += $amount;
@@ -836,9 +905,101 @@ class DpdLabelGenerator
         return array_search(strtoupper($iso2), array_column($countries, 'country'), true);
     }
 
+    /**
+     * Return a list of human-readable reasons why this order cannot be shipped yet.
+     * Empty array means the order is OK to send to DPD.
+     *
+     * Per-line weight is required (it's what drives the parcel `weight` field).
+     * Per-line dimensions are required only when the operator did not pick a
+     * package-size override at label generation time — if they did, the override
+     * wins and we never read product dimensions.
+     */
+    private function validateOrderShippingData($orderProducts, $volume)
+    {
+        $missing = [];
+        $needsDimensions = empty($volume);
+
+        foreach ($orderProducts as $orderProduct) {
+            $label = !empty($orderProduct['product_name'])
+                ? $orderProduct['product_name']
+                : ('product #' . $orderProduct['product_id']);
+
+            if ((float)$orderProduct['product_weight'] <= 0) {
+                $missing[] = sprintf("weight not set on '%s'", $label);
+            }
+
+            if ($needsDimensions) {
+                $product = new Product((int)$orderProduct['product_id']);
+                if ((float)$product->width <= 0 || (float)$product->height <= 0 || (float)$product->depth <= 0) {
+                    $missing[] = sprintf("width/height/depth not set on '%s'", $label);
+                }
+                // Also check the live weight since the customs section uses it.
+                if ((float)$product->weight <= 0) {
+                    $missing[] = sprintf("current product weight is 0 on '%s'", $label);
+                }
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Build the DPD `volume` field as an LLLWWWHHH string (3 digits per dimension, in cm).
+     * If the operator supplied a $volume at label generation, that always wins.
+     * Otherwise compute from the products: width and height take the max across lines,
+     * depth sums (depth × quantity) per line to model items stacked along that axis.
+     */
+    private function buildVolumeCode($orderProducts, $volume)
+    {
+        if (!empty($volume)) {
+            return $volume;
+        }
+
+        $toCm = $this->dimensionUnitToCmFactor();
+
+        $maxWidth = 0.0;
+        $maxHeight = 0.0;
+        $totalDepth = 0.0;
+
+        foreach ($orderProducts as $orderProduct) {
+            $product = new Product((int)$orderProduct['product_id']);
+            $width  = (float)$product->width  * $toCm;
+            $height = (float)$product->height * $toCm;
+            $depth  = (float)$product->depth  * $toCm;
+
+            if ($width  > $maxWidth)  { $maxWidth  = $width;  }
+            if ($height > $maxHeight) { $maxHeight = $height; }
+            $totalDepth += $depth * max(1, (int)$orderProduct['product_quantity']);
+        }
+
+        // Clamp to the 3-digit-per-component encoding the DPD volume field uses.
+        $l = min(999, max(1, (int)ceil($totalDepth)));
+        $w = min(999, max(1, (int)ceil($maxWidth)));
+        $h = min(999, max(1, (int)ceil($maxHeight)));
+
+        return sprintf('%03d%03d%03d', $l, $w, $h);
+    }
+
+    /**
+     * Conversion factor from PrestaShop's configured dimension unit to centimeters.
+     * Defaults to 1.0 (cm) when the unit is unset or unrecognized.
+     */
+    private function dimensionUnitToCmFactor()
+    {
+        $unit = strtolower((string)Configuration::get('PS_DIMENSION_UNIT'));
+        switch ($unit) {
+            case 'm':  return 100.0;
+            case 'cm': return 1.0;
+            case 'mm': return 0.1;
+            case 'in': return 2.54;
+            default:   return 1.0;
+        }
+    }
+
     private function generateFreshFreezeParcels($orderProducts, $weight, $freshFreezeData, $parcelCount, $volume)
     {
         $parcels = [];
+        $parcelVolume = $this->buildVolumeCode($orderProducts, $volume);
 
         foreach ($orderProducts as $orderProduct) {
             $orderId = (int)$orderProduct['id_order'];
@@ -852,7 +1013,7 @@ class DpdLabelGenerator
                         $orderProduct['reference']
                     ],
                     'weight' => (int) $weight,
-                    'volume' => !empty($volume) ? $volume : Configuration::get('dpdconnect_default_package_type'),
+                    'volume' => $parcelVolume,
                     'goodsExpirationDate' => (int)$expirationDate,
                     'goodsDescription' => mb_strcut($freshFreezeData[$orderId][$orderProduct['product_id']]['carrier_description'], 0, 30)
                 ];
