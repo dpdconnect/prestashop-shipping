@@ -47,7 +47,7 @@ use PrestaShop\PrestaShop\Core\Grid\Action\Bulk\Type\SubmitBulkAction;
 
 class dpdconnect extends Module
 {
-    const VERSION = '2.1';
+    const VERSION = '2.1.1';
 
     public $twig;
     public $commandBus;

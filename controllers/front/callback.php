@@ -23,6 +23,7 @@ use DpdConnect\classes\JobRepo;
 use DpdConnect\classes\BatchRepo;
 use DpdConnect\classes\Database\LabelRepo;
 use DpdConnect\classes\Connect\Label as ConnectLabel;
+use DpdConnect\classes\DpdLabelGenerator;
 use DpdConnect\classes\enums\JobStatus;
 
 class dpdconnectcallbackModuleFrontController extends ModuleFrontController
@@ -71,6 +72,15 @@ class dpdconnectcallbackModuleFrontController extends ModuleFrontController
             $labelRepo = new LabelRepo();
             $label = $connectLabel->get($parcelNumber);
             $labelId = $labelRepo->create($orderId, $label, $job['type'], $shipmentIdentifier, $parcelNumbers);
+
+            // Mirror the synchronous flow: write the tracking number onto the order
+            // and (optionally) change its status. The async/bulk path previously only
+            // stored the label PDF, so bulk-generated labels never updated the order.
+            DpdLabelGenerator::applyLabelToOrder(
+                $orderId,
+                $incomingData['shipment']['trackingInfo']['parcelNumbers']
+            );
+
             $jobRepo->updateStatus($job, JobStatus::STATUSSUCCESS, null, null, $labelId);
             $batchRepo->updateStatus($job);
         } catch (Exception $e) {
