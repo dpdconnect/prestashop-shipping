@@ -35,7 +35,7 @@ class ProductFormModifier
     }
 
     /**
-     * @param int|null $productId
+     * @param int $productId
      * @param FormBuilderInterface $productFormBuilder
      */
     public function modify(

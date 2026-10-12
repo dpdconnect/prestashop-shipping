@@ -30,6 +30,7 @@ class AdminDownloadLabelController extends ModuleAdminController
     public $delete;
     public $return;
     public $orderIds;
+    public $parcels;
 
     public function __construct()
     {

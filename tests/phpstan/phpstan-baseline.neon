@@ -1,0 +1,46 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Variable \\$fullName might not be defined\\.$#"
+			count: 2
+			path: ../../classes/DpdLabelGenerator.php
+
+		-
+			message: "#^Variable \\$link might not be defined\\.$#"
+			count: 1
+			path: ../../classes/DpdLabelGenerator.php
+
+		-
+			message: "#^Binary operation \"\\-\" between int\\<1, max\\> and non\\-falsy\\-string results in an error\\.$#"
+			count: 1
+			path: ../../classes/DpdProductHelper.php
+
+		-
+			message: "#^Function __ not found\\.$#"
+			count: 1
+			path: ../../controllers/admin/AdminDpdJobsController.php
+
+		-
+			message: "#^Access to an undefined property Cookie\\:\\:\\$parcelId\\.$#"
+			count: 1
+			path: ../../controllers/front/OneStepParcelshop.php
+
+		-
+			message: "#^Access to an undefined property Cookie\\:\\:\\$parcelshopData\\.$#"
+			count: 2
+			path: ../../controllers/front/OneStepParcelshop.php
+
+		-
+			message: "#^Access to an undefined property Cookie\\:\\:\\$parcelId\\.$#"
+			count: 1
+			path: ../../dpdconnect.php
+
+		-
+			message: "#^Access to an undefined property Cookie\\:\\:\\$parcelshopData\\.$#"
+			count: 1
+			path: ../../dpdconnect.php
+
+		-
+			message: "#^Cannot call method modify\\(\\) on object\\|false\\.$#"
+			count: 1
+			path: ../../dpdconnect.php

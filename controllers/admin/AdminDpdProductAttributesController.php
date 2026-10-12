@@ -208,7 +208,7 @@ class AdminDpdProductAttributesController extends ModuleAdminController
                        age_check = "' . $ageCheck . '"
                  WHERE id_dpd_product_attributes = ' . $id;
         try {
-            DB::getInstance()->execute($sql);
+            Db::getInstance()->execute($sql);
             Tools::redirectAdmin(self::$currentIndex . '&conf=4&token=' . $this->token);
         } catch (Exception $e) {
             $this->errors[] = Tools::displayError('An error has occurred: Can\'t save the current object');

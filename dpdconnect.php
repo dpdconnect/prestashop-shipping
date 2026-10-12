@@ -23,6 +23,10 @@ if (!defined('_PS_VERSION_')) {
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+if (PHP_VERSION_ID < 70400) {
+    return;
+}
+
 require_once(_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php');
 
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,7 +39,6 @@ use DpdConnect\classes\DpdShippingList;
 use DpdConnect\classes\DpdParcelPredict;
 use DpdConnect\classes\DpdLabelGenerator;
 use DpdConnect\classes\DpdEncryptionManager;
-use DpdConnect\classes\DpdCheckoutDeliveryStep;
 use DpdConnect\classes\DpdDeliveryOptionsFinder;
 use DpdConnect\classes\Service\SettingsDataValidator;
 use DpdConnect\Entity\ProductShippingInformation;
@@ -47,7 +50,7 @@ use PrestaShop\PrestaShop\Core\Grid\Action\Bulk\Type\SubmitBulkAction;
 
 class dpdconnect extends Module
 {
-    const VERSION = '2.1.1';
+    const VERSION = '2.4.1';
 
     public $twig;
     public $commandBus;
@@ -72,6 +75,7 @@ class dpdconnect extends Module
         'actionCheckoutRender',
         'displayAfterCarrier',
 
+        'actionValidateOrder', // Save parcelshop data server-side at order creation
         'displayOrderConfirmation',
         'actionOrderGridDefinitionModifier',
         'displayBackOfficeHeader',
@@ -88,7 +92,6 @@ class dpdconnect extends Module
         // Initialize basic stuff
         $container = SymfonyContainer::getInstance();
         if ($container !== null) {
-            /** @var EntityManagerInterface $entityManager */
             $this->entityManager = $container->get('doctrine.orm.entity_manager');
         }
 
@@ -102,7 +105,7 @@ class dpdconnect extends Module
 
         $this->ps_versions_compliancy = [
             'min' => '1.7.0',
-            'max' => _PS_VERSION_
+            'max' => '8.99.99'
         ];
         $this->need_instance = 1;
         $this->bootstrap = true;
@@ -486,14 +489,14 @@ class dpdconnect extends Module
                     'options' => [
                         'query' => [
                             [
-                                'default_package_type' => '100050050',
-                                'name' => $this->l('Normal Parcel'),
+                                'default_package_type' => '060040030',
+                                'name' => $this->l('Normal Parcel (60×40×30 cm)'),
                                 "position" => 1,
                                 "id_lang" => 1,
                             ],
                             [
-                                'default_package_type' => '015010010',
-                                'name' => $this->l('Small Parcel'),
+                                'default_package_type' => '030020020',
+                                'name' => $this->l('Small Parcel (30×20×20 cm)'),
                                 "position" => 2,
                                 "id_lang" => 1,
                             ],
@@ -739,6 +742,20 @@ class dpdconnect extends Module
             $mapsKey = Configuration::get('gmaps_key');
         }
 
+        // dpdconnect_url is the API base URL (e.g. "https://api.dpdconnect.nl"), not a
+        // complete map-JS URL. Always append the /parcelshop/map/js path. If the admin
+        // already stored a URL ending in /parcelshop/map/js we leave it as-is for
+        // backwards compatibility.
+        $configuredBase = Configuration::get('dpdconnect_url');
+        if ($configuredBase) {
+            $mapUrl = rtrim($configuredBase, '/');
+            if (substr($mapUrl, -strlen('/parcelshop/map/js')) !== '/parcelshop/map/js') {
+                $mapUrl .= '/parcelshop/map/js';
+            }
+        } else {
+            $mapUrl = Client::ENDPOINT . '/parcelshop/map/js';
+        }
+
         $link = new Link();
         $scope->assign([
             'baseUri' => __PS_BASE_URI__,
@@ -750,7 +767,7 @@ class dpdconnect extends Module
             'mapsKey' => $mapsKey,
             'cookieParcelId' => $this->context->cookie->parcelId,
             'oneStepParcelshopUrl' => $link->getModuleLink('dpdconnect', 'OneStepParcelshop'),
-            'dpdParcelshopMapUrl' => (Configuration::get('dpdconnect_url')) ? Configuration::get('dpdconnect_url') : Client::ENDPOINT . '/parcelshop/map/js',
+            'dpdParcelshopMapUrl' => $mapUrl,
         ]);
 
         $tpl = $this->context->smarty->createTemplate(
@@ -759,7 +776,6 @@ class dpdconnect extends Module
         );
 
         return $tpl->fetch();
-
     }
 
     // Define Order grid bulk actions
@@ -847,6 +863,35 @@ class dpdconnect extends Module
                 $this->context->controller->errors[] = $this->l('Please select a parcelshop');
             }
         }
+    }
+
+    /**
+     * Save parcelshop data at order creation time. displayOrderConfirmation alone is
+     * fragile: if the customer never reaches the confirmation page (browser close,
+     * payment redirect, etc.) the parcelshop selection is lost. actionValidateOrder
+     * fires server-side as soon as the order exists, so the data is captured reliably.
+     *
+     * The carrier check is essential: without it, a stale parcelId cookie from a
+     * previous selection can leak into a later non-parcelshop order and cause
+     * Parcelshop labels to be requested for Home Delivery orders (or vice versa).
+     */
+    public function hookActionValidateOrder($params)
+    {
+        $order = $params['order'];
+        if (empty($this->context->cookie->parcelId)) {
+            return;
+        }
+        if ((int)$order->id_carrier !== (int)$this->dpdCarrier->getLatestCarrierByReferenceId($this->dpdProductHelper->getDpdParcelshopCarrierId())) {
+            return;
+        }
+
+        Db::getInstance()->insert('parcelshop', [
+            'order_id' => pSQL($order->id),
+            'parcelshop_id' => pSQL($this->context->cookie->parcelId),
+            'parcelshop_data' => pSQL($this->context->cookie->parcelshopData),
+        ]);
+        unset($this->context->cookie->parcelId);
+        unset($this->context->cookie->parcelshopData);
     }
 
     public function hookDisplayOrderConfirmation($params)

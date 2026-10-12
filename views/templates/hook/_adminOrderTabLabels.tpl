@@ -64,8 +64,8 @@
                         <div class="input-group col-sm-4" style="padding-left: 0; margin-left: 0; margin-top: 5px;">
                             <label for="parcel-volume"></label>
                             <select class="form-control" id="parcel-volume">
-                                <option value="150010010" {if $selected_package_type == "150010010"} selected{/if}>Normal Parcel</option>
-                                <option value="015010010" {if $selected_package_type == "015010010"} selected{/if}>Small Parcel</option>
+                                <option value="060040030" {if $selected_package_type == "060040030"} selected{/if}>Normal Parcel (60×40×30 cm)</option>
+                                <option value="030020020" {if $selected_package_type == "030020020"} selected{/if}>Small Parcel (30×20×20 cm)</option>
                             </select>
                         </div>
                     </div>

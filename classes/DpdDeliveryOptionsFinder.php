@@ -27,6 +27,9 @@ use PrestaShop\PrestaShop\Adapter\Product\PriceFormatter;
 
 class DpdDeliveryOptionsFinder extends DeliveryOptionsFinder
 {
+    public $dpdCarrier;
+    public $dpdProductHelper;
+
     public function getDeliveryOptions()
     {
         $this->dpdCarrier = new DpdCarrier();

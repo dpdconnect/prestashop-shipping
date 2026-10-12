@@ -47,7 +47,10 @@ class DpdType extends TranslatorAwareType
                 'label_tag_name' => 'h3',
                 'required' => true,
                 'choices' => $this->freshFreezeService->getAllowedShippingTypes(),
-                'choice_label' => function ($choice, string $key, mixed $value): string {
+                // No parameter type hints here: `mixed` is PHP 8.0+ and PHP 7.4
+                // (PrestaShop 1.7) resolves it as a class name, which makes this
+                // closure throw a TypeError as soon as the choice list renders.
+                'choice_label' => function ($choice, $key, $value): string {
                     return ucfirst($choice);
                 },
                 'placeholder' => $this->trans('Select a shipping type', 'Modules.DpdConnect.Admin'),

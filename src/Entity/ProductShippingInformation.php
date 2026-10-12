@@ -52,7 +52,7 @@ class ProductShippingInformation
     }
 
     /**
-     * @param int $product
+     * @return int
      */
     public function getProductId()
     {
@@ -60,7 +60,7 @@ class ProductShippingInformation
     }
 
     /**
-     * @param int $product
+     * @param int $productId
      */
     public function setProductId($productId)
     {

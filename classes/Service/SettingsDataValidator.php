@@ -86,7 +86,7 @@ class SettingsDataValidator
 
         $error = self::validateLength($email, $maxLength);
 
-        if (!str_contains($email, "@")){
+        if (strpos($email, "@") === false) {
             $error = 'Not a valid email format';
         }
 
