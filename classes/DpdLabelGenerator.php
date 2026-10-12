@@ -21,6 +21,7 @@ namespace DpdConnect\classes;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use Carrier;
 use Db;
 use Order;
 use OrderCarrier;
@@ -45,11 +46,16 @@ use DpdConnect\Sdk\ClientBuilder;
 use DpdConnect\Sdk\Objects\MetaData;
 use DpdConnect\Sdk\Objects\ObjectFactory;
 use DpdConnect\Sdk\Exceptions\DpdException;
-use DpdConnect\Sdk\Exceptions\InvalidArgumentHttpException;
+use iio\libmergepdf\Merger;
 use PrestaShop\PrestaShop\Core\CommandBus\CommandBusInterface;
 
 class DpdLabelGenerator
 {
+    /**
+     * DPD refuses parcels weighing this much or more (in kilograms).
+     */
+    const MAX_PARCEL_WEIGHT_KG = 31.5;
+
     public $dpdClient;
     public $errors;
     public $dpdError;
@@ -271,17 +277,32 @@ class DpdLabelGenerator
         }
         $country = new Country($address->id_country);
         $customer = $tempOrder->getCustomer();
-        $productCode = 'CL';
+
+        // Use the actual DPD product code mapped to this carrier (e.g. B2C for Home,
+        // CL for Classic) instead of always sending CL. Sync labels happen to work
+        // because DPD's sync endpoint soft-remaps CL → carrier-correct code, but
+        // async batches do not — they accept CL literally, which produces Classic
+        // labels without the predict tracking flow.
+        $orderCarrier = new Carrier((int)$tempOrder->id_carrier);
+        $carrierProductCode = Db::getInstance()->getValue(
+            'SELECT dpd_product_code FROM `' . \_DB_PREFIX_ . 'carrier_dpd_product` '
+            . 'WHERE carrier_id = ' . (int)$orderCarrier->id_reference
+        );
+        $productCode = $carrierProductCode ?: 'CL';
         $weightTotal = 0;
         $saturdayDelivery = false;
         $orderType = 'consignment';
 
         // Weight per line is trusted here because generateLabel() validates every product
         // has product_weight > 0 before this method runs. See validateOrderShippingData().
+        //
+        // $weightTotal is in KILOGRAMS from here on. PrestaShop stores
+        // order_detail.product_weight in the shop's weight unit (kg by default).
+        // The DPD API expects parcel weights in decagram (10 g), so the kg -> dag
+        // conversion happens once, at the point of use, via self::toDecagram().
         foreach ($orderProducts as $orderProduct) {
-            $weightTotal += ((float)$orderProduct['product_weight'] / 100) * (int)$orderProduct['product_quantity'];
+            $weightTotal += (float)$orderProduct['product_weight'] * (int)$orderProduct['product_quantity'];
         }
-        $weightTotal *= 100;
         if ($this->dpdParcelPredict->checkIfSaturdayCarrier($orderId) && !$return) {
             $saturdayDelivery = true;
         }
@@ -300,7 +321,9 @@ class DpdLabelGenerator
             $this->errors[] = $this->dpdError->get('CANCELED', $orderId);
             //TODO create log taht the order's state is cancelled
         }
-        if ($weightTotal / $parcelCount >= 31.5 * 100) {
+        // DPD refuses parcels of 31.5 kg or more. $weightTotal is in kilograms,
+        // so compare against the limit directly.
+        if ($weightTotal / $parcelCount >= self::MAX_PARCEL_WEIGHT_KG) {
             $this->errors[] = $this->dpdError->get('WEIGHT_TO_HEAVY');
             //TODO create log that the weight is to big
         }
@@ -397,7 +420,7 @@ class DpdLabelGenerator
         if (!$return && FreshFreezeHelper::shippingTypeIsFreshOrFreeze($dpdShippingType)) {
             $shipment['parcels'] = $this->generateFreshFreezeParcels(
                 $orderProducts,
-                ceil($weightTotal / $parcelCount) * 100,
+                self::toDecagram($weightTotal / $parcelCount),
                 $freshFreezeData,
                 $parcelCount,
                 $volume
@@ -415,7 +438,7 @@ class DpdLabelGenerator
                     'customerReferences' => [
                         (string)$orderId
                     ],
-                    'weight' => (int) ceil($weightTotal / $amountOfParcels) * 100,
+                    'weight' => self::toDecagram($weightTotal / $amountOfParcels),
                     'volume' => $parcelVolume,
                 ];
 
@@ -531,6 +554,23 @@ class DpdLabelGenerator
         }
         header('location: ' . $link);
         return true;
+    }
+
+    /**
+     * Convert a weight in kilograms to the decagram (10 g) unit the DPD API
+     * expects for parcel weights.
+     *
+     * The rounding has to happen *after* the conversion. Rounding first and
+     * scaling afterwards would round to whole kilograms, which overstated every
+     * parcel weight (a 400 g parcel was declared as 1 kg).
+     *
+     * @param float $kilograms
+     *
+     * @return int weight in decagram
+     */
+    public static function toDecagram($kilograms)
+    {
+        return (int) ceil((float) $kilograms * 100);
     }
 
     public static function generateOrderViewUrl($orderId)
@@ -677,14 +717,39 @@ class DpdLabelGenerator
 
     public static function createUrl()
     {
+        // Configuration::get() returns (bool)false when the row is NULL in the database,
+        // which the previous "=== '' || is_null()" check did not catch — resulting in a
+        // hostless relative URL being sent to DPD as the async callback target.
         $baseUrl = Configuration::get('dpdconnect_callback_url');
-        if ($baseUrl === "" || is_null($baseUrl)) {
+        if (empty($baseUrl)) {
             $baseUrl = Tools::getHttpHost(true) . __PS_BASE_URI__;
         }
 
         $url = $baseUrl . "index.php?fc=module&module=dpdconnect&controller=callback";
+        $url .= '&token=' . self::getCallbackToken();
 
         return $url;
+    }
+
+    /**
+     * Shared secret embedded in the async callback URL we hand to DPD.
+     *
+     * The callback endpoint is a public front controller, so without this the
+     * endpoint is reachable by anyone who can guess a fully predictable URL.
+     * Generated once and stored; callers must compare with hash_equals().
+     *
+     * @return string
+     */
+    public static function getCallbackToken()
+    {
+        $token = Configuration::get('dpdconnect_callback_token');
+
+        if (empty($token)) {
+            $token = bin2hex(openssl_random_pseudo_bytes(32));
+            Configuration::updateValue('dpdconnect_callback_token', $token);
+        }
+
+        return $token;
     }
 
     private function redirectToBatch($batchId)
@@ -705,24 +770,17 @@ class DpdLabelGenerator
     private function redirectToZipDownload($labelsForDirectDownload)
     {
         if ((bool)Configuration::get('dpdconnect_merge_pdf_files')) {
-            require __DIR__ . '/../vendor/myokyawhtun/pdfmerger/PDFMerger.php';
-            $pdf = new \PDFMerger\PDFMerger();
+            $merger = new Merger();
 
             foreach ($labelsForDirectDownload as $item) {
-                $path = tempnam(sys_get_temp_dir(), 'dpdpdf');
-                $f = fopen($path, 'w');
-                fwrite($f, $item['pdf']);
-
-                $pdf->addPDF($path);
+                $merger->addRaw($item['pdf']);
             }
 
-
             if (empty($this->errors)) {
-                header("Content-Type: application/zip");
+                header("Content-Type: application/pdf");
                 header('Content-Disposition: attachment; filename="dpd-label-' . date("Ymdhis") . '.pdf"');
 
-                $createdPdf = $pdf->merge('browser');
-                echo $createdPdf;
+                echo $merger->merge();
                 die;
             }
         }

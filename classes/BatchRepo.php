@@ -42,7 +42,7 @@ class BatchRepo
             'status' => $batchStatus,
         ];
 
-        $where = 'id_dpd_batches = ' . $job['batch_id'];
+        $where = 'id_dpd_batches = ' . (int) $job['batch_id'];
 
         Db::getInstance()->update(self::TABLE, $data, $where);
     }
@@ -59,7 +59,7 @@ class BatchRepo
                       WHERE id_dpd_jobs = %s)',
             _DB_PREFIX_,
             JobRepo::TABLE,
-            $jobId
+            (int) $jobId
         ));
 
         return Db::getInstance()->getRow($sql);
@@ -76,7 +76,7 @@ class BatchRepo
             JobStatus::STATUSSUCCESS,
             JobStatus::STATUSFAILED
         ));
-        $sql->where(sprintf('batch_id = %s', $batchId));
+        $sql->where(sprintf('batch_id = %d', (int) $batchId));
 
         return Db::getInstance()->getRow($sql);
     }

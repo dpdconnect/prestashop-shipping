@@ -1,7 +1,19 @@
 includes:
   - %currentWorkingDirectory%/vendor/prestashop/php-dev-tools/phpstan/ps-module-extension.neon
+  - phpstan-baseline.neon
     
 parameters:
+  # Analyse against the module's PHP floor (composer.json requires >=7.4 for
+  # PrestaShop 1.7) rather than the highest supported version, so language-level
+  # constructs are judged against the oldest runtime we ship on.
+  #
+  # Note: this does NOT catch calls to PHP 8-only stdlib functions such as
+  # str_contains(). PHPStan resolves function existence from the runtime it runs
+  # on, not from phpVersion, so a canary str_contains() call goes unreported at
+  # every level, on both the 7.4 and 8.3 binaries. Catching that class of
+  # regression needs a dedicated compatibility checker (e.g. PHPCompatibility
+  # for PHP_CodeSniffer) as a separate CI job.
+  phpVersion: 70400
   paths:
     - %currentWorkingDirectory%
   excludePaths:

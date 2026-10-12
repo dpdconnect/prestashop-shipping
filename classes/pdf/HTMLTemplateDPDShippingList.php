@@ -21,6 +21,8 @@
 
 class HTMLTemplateDPDShippingList extends HTMLTemplate
 {
+    public $object;
+
     public function __construct($object, $smarty)
     {
         $this->smarty = $smarty;

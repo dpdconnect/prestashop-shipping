@@ -5,13 +5,13 @@
 <h1>DPD Connect for PrestaShop 8</h1>
 
 <p>
-  <img src="https://img.shields.io/badge/PHP-7.1%2B-777BB4?style=flat-square&logo=php&logoColor=white&labelColor=474A8A" alt="PHP 7.1+" />
+  <img src="https://img.shields.io/badge/PHP-7.4%E2%80%938.4-777BB4?style=flat-square&logo=php&logoColor=white&labelColor=474A8A" alt="PHP 7.4–8.4" />
   &nbsp;
-  <img src="https://img.shields.io/badge/PrestaShop-1.7%2B-DF0067?style=flat-square&logo=prestashop&logoColor=white&labelColor=4D4F5C" alt="PrestaShop 1.7+" />
+  <img src="https://img.shields.io/badge/PrestaShop-1.7%20%26%208.x-DF0067?style=flat-square&logo=prestashop&logoColor=white&labelColor=4D4F5C" alt="PrestaShop 1.7 & 8.x" />
   &nbsp;
   <img src="https://img.shields.io/badge/License-GPL--3.0-0072B8?style=flat-square&labelColor=555555" alt="License GPL-3.0" />
   &nbsp;
-  <img src="https://img.shields.io/badge/Version-2.1-2ea44f?style=flat-square&labelColor=555555" alt="Version 2.1" />
+  <img src="https://img.shields.io/badge/Version-2.3-2ea44f?style=flat-square&labelColor=555555" alt="Version 2.3" />
 </p>
 
 <p>
@@ -81,7 +81,7 @@
 
 | Requirement | Version |
 |-------------|---------|
-| PHP | 7.1+ (PrestaShop 1.7) / 8.1+ (PrestaShop 8) |
+| PHP | 7.4+ (PrestaShop 1.7) / 8.1 – 8.4 (PrestaShop 8) |
 | PrestaShop | 1.7.x or 8.x |
 | MySQL / MariaDB | As required by PrestaShop |
 | OpenSSL PHP extension | Required for credential encryption |
@@ -186,22 +186,23 @@ ln -s $(pwd) /path/to/prestashop/modules/dpdconnect
 
 ### Static analysis
 
+PHPStan needs a PrestaShop source tree to resolve core classes; point
+`_PS_ROOT_DIR_` at one:
+
 ```bash
-cd tests/phpstan
 composer install
-vendor/bin/phpstan analyse --configuration=phpstan.neon
+_PS_ROOT_DIR_=/path/to/prestashop vendor/bin/phpstan analyse --configuration=tests/phpstan/phpstan.neon
 ```
 
 ### CI/CD
 
-GitLab CI builds two artifacts on every push:
-
-| Job | PHP | Target |
-|-----|-----|--------|
-| `prestashop17` | 7.1 | PrestaShop 1.7 |
-| `prestashop8` | 8.1 | PrestaShop 8 |
-
-Both produce a `dpdconnect.zip` artifact retained for 14 days.
+| Job | Stage | PHP | Purpose |
+|-----|-------|-----|---------|
+| `lint-php74` | check (MR only) | 7.4 | `composer install` + `php -l` syntax sweep (PS 1.7 floor) |
+| `lint-php84` | check (MR only) | 8.4 | `composer install` + `php -l` syntax sweep |
+| `phpstan` | check (MR only) | 8.1 | PHPStan static analysis against PrestaShop 8.2 |
+| `prestashop17` | build | 7.4 | Builds the `dpdconnect.zip` artifact for PrestaShop 1.7 |
+| `prestashop8` | build | 8.1 | Builds the `dpdconnect.zip` artifact for PrestaShop 8 |
 
 ### Documentation
 

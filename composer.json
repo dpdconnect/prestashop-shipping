@@ -2,10 +2,19 @@
     "name": "dpdconnect/prestashop-shipping",
     "description": "DPD Prestashop shipping extension",
     "license": "GPL-3.0-or-later",
-    "minimum-stability": "dev",
+    "type": "prestashop-module",
+    "prefer-stable": true,
     "require": {
-        "dpdconnect/php-sdk": "dev-master",
-        "myokyawhtun/pdfmerger": "dev-master"
+        "php": ">=7.4",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "dpdconnect/php-sdk": "^2.1",
+        "iio/libmergepdf": "^4.0"
+    },
+    "require-dev": {
+        "prestashop/php-dev-tools": "^5.0",
+        "phpstan/phpstan": "^1.12"
     },
     "autoload": {
         "psr-4": {
@@ -17,7 +26,9 @@
     },
     "config": {
         "preferred-install": "dist",
-        "prepend-autoloader": false
-    },
-    "type": "prestashop-module"
+        "prepend-autoloader": false,
+        "platform": {
+            "php": "7.4.0"
+        }
+    }
 }

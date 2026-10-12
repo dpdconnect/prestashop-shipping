@@ -50,7 +50,7 @@ class JobRepo
         $sql = new DbQuery();
         $sql->from(self::TABLE);
         $sql->select('*');
-        $sql->where(sprintf('id_dpd_jobs = "%s"', $id));
+        $sql->where('id_dpd_jobs = ' . (int) $id);
 
         return Db::getInstance()->getRow($sql);
     }
@@ -60,7 +60,7 @@ class JobRepo
         $sql = new DbQuery();
         $sql->from(self::TABLE);
         $sql->select('*');
-        $sql->where(sprintf('external_id = "%s"', $externalId));
+        $sql->where(sprintf('external_id = "%s"', pSQL($externalId)));
 
         return Db::getInstance()->getRow($sql);
     }
@@ -70,7 +70,9 @@ class JobRepo
         $sql = new DbQuery();
         $sql->from(self::TABLE);
         $sql->select('*');
-        $sql->where(sprintf('order_id = "%s"', $orderId));
+        // order_id is a varchar column in this table, so keep it quoted+escaped
+        // rather than casting to int.
+        $sql->where(sprintf('order_id = "%s"', pSQL($orderId)));
 
         return Db::getInstance()->getRow($sql);
     }
@@ -90,7 +92,7 @@ class JobRepo
             $data['label_id'] = $labelId;
         }
 
-        $where = 'id_dpd_jobs = ' . $job['id_dpd_jobs'];
+        $where = 'id_dpd_jobs = ' . (int) $job['id_dpd_jobs'];
 
         Db::getInstance()->update(self::TABLE, $data, $where);
     }
